@@ -1,5 +1,22 @@
 <script setup lang="ts">
+import type { PatientResponse } from '~/composables/usePatientsApi'
+import type { LabTestResponse } from '~/composables/useTestsApi'
+
 useSeoMeta({ title: 'Dashboard — LabFlow' })
+
+const { public: { apiBase } } = useRuntimeConfig()
+
+const { data: patientData } = await useFetch<PatientResponse>('/customers', {
+  baseURL: apiBase,
+  params: { pageSize: 100, sortBy: 'name', sortOrder: 'ASC' }
+})
+const { data: testData } = await useFetch<LabTestResponse>('/tests', {
+  baseURL: apiBase,
+  params: { pageSize: 100, sortBy: 'name', sortOrder: 'ASC' }
+})
+
+const allPatients = computed(() => patientData.value?.content ?? [])
+const allTests = computed(() => testData.value?.content ?? [])
 
 const stats = [
   { label: 'Active Orders', value: '—', icon: 'i-lucide-clipboard-list', color: 'primary' },
@@ -7,17 +24,27 @@ const stats = [
   { label: 'Patients Today', value: '—', icon: 'i-lucide-users', color: 'success' },
   { label: 'Completed Today', value: '—', icon: 'i-lucide-circle-check', color: 'neutral' }
 ]
+
+const orderModalOpen = ref(false)
 </script>
 
 <template>
   <UContainer class="py-8">
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold text-highlighted">
-        Dashboard
-      </h1>
-      <p class="text-sm text-muted mt-1">
-        Clinical laboratory overview
-      </p>
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-highlighted">
+          Dashboard
+        </h1>
+        <p class="text-sm text-muted mt-1">
+          Clinical laboratory overview
+        </p>
+      </div>
+      <UButton
+        icon="i-lucide-plus"
+        @click="orderModalOpen = true"
+      >
+        New Order
+      </UButton>
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -85,5 +112,13 @@ const stats = [
         </div>
       </UCard>
     </div>
+
+    <OrderFormModal
+      v-model:open="orderModalOpen"
+      :is-editing="false"
+      :order="null"
+      :patients="allPatients"
+      :tests="allTests"
+    />
   </UContainer>
 </template>

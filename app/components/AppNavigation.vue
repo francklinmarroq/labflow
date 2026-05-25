@@ -29,14 +29,14 @@ const links = [
 
 const configLinks = [
   {
-    label: 'Pathologies',
-    icon: 'i-lucide-microscope',
-    to: '/config/pathologies'
+    label: 'Units',
+    icon: 'i-lucide-scale',
+    to: '/config/units'
   },
   {
-    label: 'Tests',
-    icon: 'i-lucide-test-tube',
-    to: '/config/tests'
+    label: 'Age Ranges',
+    icon: 'i-lucide-calendar-range',
+    to: '/config/age-ranges'
   },
   {
     label: 'Parameters',
@@ -49,14 +49,19 @@ const configLinks = [
     to: '/config/reference-ranges'
   },
   {
-    label: 'Units',
-    icon: 'i-lucide-scale',
-    to: '/config/units'
+    label: 'Tests',
+    icon: 'i-lucide-test-tube',
+    to: '/config/tests'
   },
   {
-    label: 'Age Ranges',
-    icon: 'i-lucide-calendar-range',
-    to: '/config/age-ranges'
+    label: 'Test Templates',
+    icon: 'i-lucide-flask-conical',
+    to: '/config/test-configs'
+  },
+  {
+    label: 'Pathologies',
+    icon: 'i-lucide-microscope',
+    to: '/config/pathologies'
   }
 ]
 </script>
