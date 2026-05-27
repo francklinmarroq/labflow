@@ -16,7 +16,7 @@ const links = [
     to: '/orders'
   },
   {
-    label: 'Test Runs',
+    label: 'Lab Workspace',
     icon: 'i-lucide-flask-conical',
     to: '/test-runs'
   },

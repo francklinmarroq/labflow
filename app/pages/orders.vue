@@ -7,20 +7,17 @@ import type { LabTestResponse } from '~/composables/useTestsApi'
 useSeoMeta({ title: 'Lab Orders — LabFlow' })
 
 const { public: { apiBase } } = useRuntimeConfig()
-const { deleteOrder } = useLabOrdersApi()
+const { deleteOrder, updateOrder } = useLabOrdersApi()
 const toast = useToast()
 
-// --- Data ---
 const { data, status, refresh } = await useFetch<LabOrderResponse>('/orders', {
   baseURL: apiBase,
   params: { pageSize: 100, sortBy: 'requestedAt', sortOrder: 'DESC' }
 })
-
 const { data: patientData } = await useFetch<PatientResponse>('/customers', {
   baseURL: apiBase,
   params: { pageSize: 100, sortBy: 'name', sortOrder: 'ASC' }
 })
-
 const { data: testData } = await useFetch<LabTestResponse>('/tests', {
   baseURL: apiBase,
   params: { pageSize: 100, sortBy: 'name', sortOrder: 'ASC' }
@@ -34,7 +31,6 @@ const patientMap = computed(() =>
   Object.fromEntries(allPatients.value.map(p => [p.id, p.name]))
 )
 
-// --- Helpers ---
 function formatDate(raw: string | null): string {
   if (!raw) return '—'
   const d = new Date(raw)
@@ -57,16 +53,29 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
   DELIVERED: 'secondary'
 }
 
-// --- Table ---
-const columns: TableColumn<LabOrder>[] = [
-  { id: 'patient', header: 'Patient' },
-  { id: 'requestedAt', header: 'Requested' },
-  { id: 'status', header: 'Status' },
-  { id: 'notes', header: 'Notes' },
-  { id: 'actions', header: '' }
-]
+const STATUS_DOTS: Record<OrderStatus, string> = {
+  PENDING: 'bg-slate-400',
+  IN_PROGRESS: 'bg-blue-500',
+  COMPLETED: 'bg-emerald-500',
+  VERIFIED: 'bg-sky-500',
+  DELIVERED: 'bg-violet-500'
+}
 
-// --- Search ---
+const STATUS_ORDER: OrderStatus[] = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'VERIFIED', 'DELIVERED']
+
+type ViewMode = 'kanban' | 'list'
+const viewMode = ref<ViewMode>('kanban')
+
+const kanbanColumns = computed(() =>
+  STATUS_ORDER.map(s => ({
+    status: s,
+    label: STATUS_LABELS[s],
+    color: STATUS_COLORS[s],
+    dot: STATUS_DOTS[s],
+    orders: orders.value.filter(o => (o.status ?? 'PENDING') === s)
+  }))
+)
+
 const searchQuery = ref('')
 const filteredOrders = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
@@ -76,6 +85,71 @@ const filteredOrders = computed(() => {
     return name.includes(q) || String(o.id).includes(q)
   })
 })
+
+const columns: TableColumn<LabOrder>[] = [
+  { id: 'orderId', header: '#' },
+  { id: 'patient', header: 'Patient' },
+  { id: 'requestedAt', header: 'Requested' },
+  { id: 'status', header: 'Status' },
+  { id: 'notes', header: 'Notes' },
+  { id: 'actions', header: '' }
+]
+
+function navigateToWorkspace(order: LabOrder) {
+  navigateTo(`/test-runs?orderId=${order.id}`)
+}
+
+// --- Drag and drop ---
+const draggingOrderId = ref<number | null>(null)
+const dragTargetStatus = ref<OrderStatus | null>(null)
+
+function onDragStart(e: DragEvent, order: LabOrder) {
+  draggingOrderId.value = order.id
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(order.id))
+  }
+}
+
+function onDragEnd() {
+  draggingOrderId.value = null
+  dragTargetStatus.value = null
+}
+
+function onColumnDragOver(e: DragEvent, status: OrderStatus) {
+  if (!draggingOrderId.value) return
+  e.preventDefault()
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+  dragTargetStatus.value = status
+}
+
+function onColumnDragLeave(e: DragEvent) {
+  const current = e.currentTarget as HTMLElement
+  if (!current.contains(e.relatedTarget as Node)) {
+    dragTargetStatus.value = null
+  }
+}
+
+async function onDrop(e: DragEvent, targetStatus: OrderStatus) {
+  e.preventDefault()
+  dragTargetStatus.value = null
+  const orderId = draggingOrderId.value
+  draggingOrderId.value = null
+  if (!orderId) return
+  const order = orders.value.find(o => o.id === orderId)
+  if (!order || (order.status ?? 'PENDING') === targetStatus) return
+  try {
+    await updateOrder(order.id, {
+      customerId: order.customerId,
+      notes: order.notes,
+      status: targetStatus
+    })
+    await refresh()
+    toast.add({ title: `Moved to ${STATUS_LABELS[targetStatus]}`, color: 'success' })
+  } catch (err: any) {
+    toast.add({ title: err?.data?.message ?? 'Failed to update status', color: 'error' })
+  }
+}
 
 // --- Form modal ---
 const modalOpen = ref(false)
@@ -94,7 +168,6 @@ function openEdit(order: LabOrder) {
   modalOpen.value = true
 }
 
-// --- Delete modal ---
 const deleteModalOpen = ref(false)
 const isDeleting = ref(false)
 const orderToDelete = ref<LabOrder | null>(null)
@@ -131,15 +204,161 @@ async function confirmDelete() {
           Patient test order management
         </p>
       </div>
-      <UButton
-        icon="i-lucide-plus"
-        @click="openCreate"
-      >
-        Add Order
-      </UButton>
+      <div class="flex items-center gap-3">
+        <!-- View toggle -->
+        <div class="flex items-center bg-elevated rounded-lg p-1 gap-0.5">
+          <button
+            type="button"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all"
+            :class="viewMode === 'kanban'
+              ? 'bg-default text-highlighted shadow-sm'
+              : 'text-muted hover:text-default'"
+            @click="viewMode = 'kanban'"
+          >
+            <UIcon
+              name="i-lucide-columns-3"
+              size="14"
+            />
+            Kanban
+          </button>
+          <button
+            type="button"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all"
+            :class="viewMode === 'list'
+              ? 'bg-default text-highlighted shadow-sm'
+              : 'text-muted hover:text-default'"
+            @click="viewMode = 'list'"
+          >
+            <UIcon
+              name="i-lucide-list"
+              size="14"
+            />
+            List
+          </button>
+        </div>
+        <UButton
+          icon="i-lucide-plus"
+          @click="openCreate"
+        >
+          Add Order
+        </UButton>
+      </div>
     </div>
 
-    <UCard>
+    <!-- Kanban view -->
+    <div v-if="viewMode === 'kanban'">
+      <div
+        v-if="status === 'pending'"
+        class="flex justify-center py-20"
+      >
+        <UIcon
+          name="i-lucide-loader-2"
+          class="animate-spin text-muted"
+          size="28"
+        />
+      </div>
+      <div
+        v-else
+        class="overflow-x-auto -mx-4 px-4 pb-6"
+      >
+        <div class="flex gap-4 min-w-max items-start">
+          <div
+            v-for="col in kanbanColumns"
+            :key="col.status"
+            class="w-[272px] flex-shrink-0 flex flex-col"
+            @dragover="onColumnDragOver($event, col.status)"
+            @dragleave="onColumnDragLeave"
+            @drop="onDrop($event, col.status)"
+          >
+            <!-- Column header -->
+            <div class="flex items-center justify-between mb-3 px-0.5">
+              <div class="flex items-center gap-2">
+                <div
+                  class="w-2 h-2 rounded-full flex-shrink-0"
+                  :class="col.dot"
+                />
+                <span class="text-sm font-semibold text-highlighted">{{ col.label }}</span>
+              </div>
+              <span class="text-xs font-medium text-muted tabular-nums bg-elevated px-2 py-0.5 rounded-full">
+                {{ col.orders.length }}
+              </span>
+            </div>
+
+            <!-- Drop zone + cards -->
+            <div
+              class="flex flex-col gap-2 rounded-xl transition-colors min-h-20 p-1 -m-1"
+              :class="dragTargetStatus === col.status && draggingOrderId
+                ? 'bg-primary/5 ring-2 ring-primary/30 ring-inset'
+                : ''"
+            >
+              <div
+                v-for="order in col.orders"
+                :key="order.id"
+                draggable="true"
+                title="Open in Lab Workspace"
+                class="rounded-xl border border-default bg-default p-3.5 cursor-pointer group hover:border-primary hover:shadow-sm transition-all select-none"
+                :class="draggingOrderId === order.id ? 'opacity-40 scale-[0.98] cursor-grab' : ''"
+                @dragstart="onDragStart($event, order)"
+                @dragend="onDragEnd"
+                @click="navigateToWorkspace(order)"
+              >
+                <div class="flex items-start gap-2">
+                  <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-sm text-highlighted truncate">
+                      {{ patientMap[order.customerId] ?? `Patient #${order.customerId}` }}
+                    </p>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class="text-xs font-mono text-muted">#{{ order.id }}</span>
+                      <span class="text-xs text-muted">{{ formatDate(order.requestedAt) }}</span>
+                    </div>
+                    <p
+                      v-if="order.notes"
+                      class="text-xs text-muted mt-1.5 line-clamp-2 leading-relaxed"
+                    >
+                      {{ order.notes }}
+                    </p>
+                  </div>
+                  <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5">
+                    <UButton
+                      icon="i-lucide-pencil"
+                      size="xs"
+                      color="neutral"
+                      variant="ghost"
+                      aria-label="Edit order"
+                      @click.stop="openEdit(order)"
+                    />
+                    <UButton
+                      icon="i-lucide-trash-2"
+                      size="xs"
+                      color="error"
+                      variant="ghost"
+                      aria-label="Delete order"
+                      @click.stop="openDelete(order)"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Empty column drop hint -->
+              <div
+                v-if="!col.orders.length"
+                class="rounded-xl border-2 border-dashed p-6 flex items-center justify-center transition-colors"
+                :class="dragTargetStatus === col.status && draggingOrderId
+                  ? 'border-primary/50 bg-primary/5'
+                  : 'border-default'"
+              >
+                <p class="text-xs text-muted">
+                  {{ dragTargetStatus === col.status && draggingOrderId ? 'Drop here' : 'No orders' }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- List view -->
+    <UCard v-else>
       <template #header>
         <UInput
           v-model="searchQuery"
@@ -155,6 +374,10 @@ async function confirmDelete() {
         :loading="status === 'pending'"
         empty="No orders found"
       >
+        <template #orderId-cell="{ row }">
+          <span class="font-mono text-muted text-sm">#{{ row.original.id }}</span>
+        </template>
+
         <template #patient-cell="{ row }">
           <span class="font-medium">{{ patientMap[row.original.customerId] ?? `#${row.original.customerId}` }}</span>
         </template>
@@ -214,7 +437,6 @@ async function confirmDelete() {
       @saved="refresh()"
     />
 
-    <!-- Delete confirmation modal -->
     <UModal
       v-model:open="deleteModalOpen"
       title="Delete Order"

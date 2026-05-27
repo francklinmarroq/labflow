@@ -43,7 +43,10 @@ const form = reactive({
 const filteredPatients = computed(() => {
   const q = patientSearch.value.trim().toLowerCase()
   if (!q) return allPatients.value
-  return allPatients.value.filter((p: Patient) => p.name.toLowerCase().includes(q))
+  return allPatients.value.filter((p: Patient) =>
+    p.name.toLowerCase().includes(q) ||
+    (p.nationalIdNumber?.toLowerCase().includes(q) ?? false)
+  )
 })
 
 const filteredTests = computed(() => {
@@ -170,7 +173,7 @@ function onPatientCreated(patient: Patient) {
           <UInput
             v-model="patientSearch"
             icon="i-lucide-search"
-            placeholder="Search patients…"
+            placeholder="Search by name or ID number…"
             size="sm"
             class="mb-2"
           />
@@ -192,6 +195,10 @@ function onPatientCreated(patient: Patient) {
                 />
               </div>
               <span class="flex-1 truncate text-default">{{ patient.name }}</span>
+              <span
+                v-if="patient.nationalIdNumber"
+                class="text-xs text-muted flex-shrink-0"
+              >{{ patient.nationalIdNumber }}</span>
             </button>
 
             <button

@@ -1,19 +1,20 @@
 <script setup lang="ts">
-import type { LabOrderResponse, OrderLabTest } from '~/composables/useLabOrdersApi'
+import type { LabOrder, LabOrderResponse, OrderLabTest } from '~/composables/useLabOrdersApi'
 import type { PatientResponse } from '~/composables/usePatientsApi'
 import type { LabTestResponse } from '~/composables/useTestsApi'
 import type { TestConfigResponse } from '~/composables/useTestConfigsApi'
 import type { ParameterResponse } from '~/composables/useParametersApi'
-import type { TestRun } from '~/composables/useTestRunsApi'
+import type { UnitResponse } from '~/composables/useUnitsApi'
+import type { TestRun, TestRunResult } from '~/composables/useTestRunsApi'
 
-useSeoMeta({ title: 'Test Runs — LabFlow' })
+useSeoMeta({ title: 'Lab Workspace — LabFlow' })
 
 const { public: { apiBase } } = useRuntimeConfig()
-const { getRunsByLabTest, addRun, verifyRun, deleteRun } = useTestRunsApi()
+const { getRunsByLabTest, addRun, verifyRun, deleteRun, updateResult } = useTestRunsApi()
 const { assignTestConfig } = useLabOrdersApi()
 const toast = useToast()
 
-// --- Catalog data (static) ---
+// Catalog data
 const { data: orderData } = await useFetch<LabOrderResponse>('/orders', {
   baseURL: apiBase,
   params: { pageSize: 100, sortBy: 'requestedAt', sortOrder: 'DESC' }
@@ -34,12 +35,17 @@ const { data: parameterData } = await useFetch<ParameterResponse>('/parameters',
   baseURL: apiBase,
   params: { pageSize: 100, sortBy: 'name', sortOrder: 'ASC' }
 })
+const { data: unitData } = await useFetch<UnitResponse>('/units', {
+  baseURL: apiBase,
+  params: { pageSize: 100, sortBy: 'unitSymbol', sortOrder: 'ASC' }
+})
 
 const orders = computed(() => orderData.value?.content ?? [])
 const allPatients = computed(() => patientData.value?.content ?? [])
 const allCatalogTests = computed(() => catalogTestData.value?.content ?? [])
 const allTestConfigs = computed(() => testConfigData.value?.content ?? [])
 const allParameters = computed(() => parameterData.value?.content ?? [])
+const allUnits = computed(() => unitData.value?.content ?? [])
 
 const patientMap = computed(() =>
   Object.fromEntries(allPatients.value.map(p => [p.id, p.name]))
@@ -53,6 +59,25 @@ const testConfigMap = computed(() =>
 const paramMap = computed(() =>
   Object.fromEntries(allParameters.value.map(p => [p.id, p]))
 )
+const unitMap = computed(() =>
+  Object.fromEntries(allUnits.value.map(u => [u.id, u.unitSymbol]))
+)
+
+const STATUS_LABELS: Record<string, string> = {
+  PENDING: 'Pending',
+  IN_PROGRESS: 'In Progress',
+  COMPLETED: 'Completed',
+  VERIFIED: 'Verified',
+  DELIVERED: 'Delivered'
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  PENDING: 'neutral',
+  IN_PROGRESS: 'info',
+  COMPLETED: 'success',
+  VERIFIED: 'primary',
+  DELIVERED: 'secondary'
+}
 
 function formatDate(raw: string | null): string {
   if (!raw) return '—'
@@ -60,24 +85,55 @@ function formatDate(raw: string | null): string {
   return isNaN(d.getTime()) ? raw : d.toLocaleDateString()
 }
 
-// --- Order selector ---
+function formatDateTime(raw: string | null): string {
+  if (!raw) return '—'
+  const d = new Date(raw)
+  return isNaN(d.getTime()) ? raw : d.toLocaleString()
+}
+
+// Order options — label includes #ID so USelectMenu can filter by both ID and name
 const orderOptions = computed(() =>
   orders.value.map(o => ({
-    label: `${patientMap.value[o.customerId] ?? '—'} — ${formatDate(o.requestedAt)}`,
+    label: `#${o.id} — ${patientMap.value[o.customerId] ?? '—'} — ${formatDate(o.requestedAt)}`,
     value: o.id
   }))
 )
 
-// --- Dynamic state ---
+// Selected order — pre-select from ?orderId= query param (set by kanban)
+const route = useRoute()
 const selectedOrderId = ref<number | undefined>(undefined)
+
+onMounted(() => {
+  const qId = Number(route.query.orderId)
+  if (qId && !isNaN(qId)) selectedOrderId.value = qId
+})
+
+const selectedOrder = computed((): LabOrder | null =>
+  orders.value.find(o => o.id === selectedOrderId.value) ?? null
+)
+
+// Dynamic state
 const orderLabTests = ref<OrderLabTest[]>([])
 const runsByLabTestId = ref<Record<number, TestRun[]>>({})
 const loadingTests = ref(false)
+
+// Tracks which run rows are expanded to show their results
+const expandedRuns = ref<Record<string, boolean>>({})
+
+function isRunExpanded(labTestId: number, runId: number): boolean {
+  return expandedRuns.value[`${labTestId}-${runId}`] ?? false
+}
+
+function toggleRunExpanded(labTestId: number, runId: number) {
+  const key = `${labTestId}-${runId}`
+  expandedRuns.value[key] = !expandedRuns.value[key]
+}
 
 async function loadOrderData(orderId: number) {
   loadingTests.value = true
   orderLabTests.value = []
   runsByLabTestId.value = {}
+  expandedRuns.value = {}
   try {
     const tests = await $fetch<OrderLabTest[]>(`/orders/${orderId}/tests`, { baseURL: apiBase })
     orderLabTests.value = tests
@@ -106,7 +162,7 @@ watch(selectedOrderId, async (id) => {
   await loadOrderData(id)
 })
 
-// --- Add Run modal ---
+// Add Run modal
 const addRunOpen = ref(false)
 const addRunLabTest = ref<OrderLabTest | null>(null)
 const isSubmitting = ref(false)
@@ -145,7 +201,7 @@ async function submitRun() {
   }
 }
 
-// --- Assign Template modal ---
+// Assign Template modal
 const assignTemplateOpen = ref(false)
 const assignLabTest = ref<OrderLabTest | null>(null)
 const assignConfigId = ref<number | null>(null)
@@ -178,13 +234,13 @@ async function saveAssignTemplate() {
   }
 }
 
-// --- Verify / Delete ---
+// Verify / Delete run
 async function handleVerify(labTestId: number, runId: number) {
   try {
     await verifyRun(labTestId, runId)
     runsByLabTestId.value[labTestId] = (runsByLabTestId.value[labTestId] ?? []).map(r => ({
       ...r,
-      isVerified: r.id === runId
+      isVerified: r.id === runId ? true : r.isVerified
     }))
     toast.add({ title: 'Run verified', color: 'success' })
   } catch (e: any) {
@@ -201,32 +257,135 @@ async function handleDeleteRun(labTestId: number, runId: number) {
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Failed to delete run', color: 'error' })
   }
 }
+
+// Edit result (merged from results.vue)
+const editOpen = ref(false)
+const editData = ref<{
+  runId: number
+  resultId: number
+  paramName: string
+  unit: string
+  value: string
+} | null>(null)
+const isUpdating = ref(false)
+
+function openEditResult(run: TestRun, result: TestRunResult) {
+  const param = paramMap.value[result.parameterId]
+  editData.value = {
+    runId: run.id,
+    resultId: result.id,
+    paramName: param?.name ?? `#${result.parameterId}`,
+    unit: param?.unitId != null ? (unitMap.value[param.unitId] ?? '') : '',
+    value: result.value ?? ''
+  }
+  editOpen.value = true
+}
+
+async function saveEdit() {
+  if (!editData.value) return
+  isUpdating.value = true
+  try {
+    const updated = await updateResult(editData.value.runId, editData.value.resultId, editData.value.value)
+    for (const lt of orderLabTests.value) {
+      const runs = runsByLabTestId.value[lt.id] ?? []
+      const runIdx = runs.findIndex(r => r.id === updated.testRunId)
+      if (runIdx !== -1) {
+        const run = runs[runIdx]!
+        const resultIdx = run.results.findIndex(r => r.id === updated.id)
+        if (resultIdx !== -1) run.results[resultIdx] = updated
+        break
+      }
+    }
+    toast.add({ title: 'Result updated', color: 'success' })
+    editOpen.value = false
+  } catch (e: any) {
+    toast.add({ title: e?.data?.message ?? e?.message ?? 'Failed to update result', color: 'error' })
+  } finally {
+    isUpdating.value = false
+  }
+}
 </script>
 
 <template>
   <UContainer class="py-8">
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-highlighted">
-        Test Runs
+        Lab Workspace
       </h1>
       <p class="text-sm text-muted mt-1">
-        Record and verify lab test runs for patient orders
+        Record test runs and review results for patient orders
       </p>
     </div>
 
     <!-- Order selector -->
     <UCard class="mb-6">
       <UFormField label="Lab Order">
-        <USelect
+        <USelectMenu
           v-model="selectedOrderId"
           :items="orderOptions"
           value-key="value"
           label-key="label"
-          placeholder="Choose a lab order…"
+          placeholder="Search by order ID or patient…"
           class="max-w-md"
         />
       </UFormField>
     </UCard>
+
+    <!-- Selected order context banner -->
+    <div
+      v-if="selectedOrder"
+      class="mb-4 rounded-xl border border-primary/30 bg-primary/5 px-5 py-4 flex items-center gap-6 flex-wrap"
+    >
+      <div>
+        <p class="text-xs font-medium text-muted uppercase tracking-wide mb-0.5">
+          Patient
+        </p>
+        <p class="font-bold text-highlighted">
+          {{ patientMap[selectedOrder.customerId] ?? `#${selectedOrder.customerId}` }}
+        </p>
+      </div>
+      <div>
+        <p class="text-xs font-medium text-muted uppercase tracking-wide mb-0.5">
+          Requested
+        </p>
+        <p class="text-default text-sm">
+          {{ formatDate(selectedOrder.requestedAt) }}
+        </p>
+      </div>
+      <div>
+        <p class="text-xs font-medium text-muted uppercase tracking-wide mb-0.5">
+          Status
+        </p>
+        <UBadge
+          v-if="selectedOrder.status"
+          :color="STATUS_COLORS[selectedOrder.status] as any"
+          variant="subtle"
+          size="sm"
+        >
+          {{ STATUS_LABELS[selectedOrder.status] }}
+        </UBadge>
+      </div>
+      <div
+        v-if="selectedOrder.notes"
+        class="flex-1 min-w-0"
+      >
+        <p class="text-xs font-medium text-muted uppercase tracking-wide mb-0.5">
+          Notes
+        </p>
+        <p class="text-sm text-muted truncate">
+          {{ selectedOrder.notes }}
+        </p>
+      </div>
+      <UButton
+        icon="i-lucide-x"
+        size="xs"
+        color="neutral"
+        variant="ghost"
+        class="ml-auto"
+        aria-label="Clear selection"
+        @click="selectedOrderId = undefined"
+      />
+    </div>
 
     <!-- Tests for selected order -->
     <template v-if="selectedOrderId">
@@ -250,16 +409,16 @@ async function handleDeleteRun(labTestId: number, runId: number) {
 
       <div
         v-else
-        class="flex flex-col gap-4"
+        class="flex flex-col gap-3"
       >
         <UCard
           v-for="labTest in orderLabTests"
           :key="labTest.id"
         >
           <template #header>
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <span class="font-semibold text-highlighted">
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="font-semibold text-highlighted truncate">
                   {{ catalogTestMap[labTest.testId] ?? `Test #${labTest.testId}` }}
                 </span>
                 <UBadge
@@ -297,49 +456,124 @@ async function handleDeleteRun(labTestId: number, runId: number) {
             </div>
           </template>
 
-          <!-- Runs -->
+          <!-- Run list -->
           <div v-if="(runsByLabTestId[labTest.id] ?? []).length">
             <div
               v-for="run in runsByLabTestId[labTest.id]"
               :key="run.id"
-              class="flex items-center justify-between py-2.5 border-b border-default last:border-0"
+              class="border-b border-default last:border-0"
             >
-              <div class="flex items-center gap-4">
-                <span class="text-sm font-medium text-highlighted w-16">
-                  Run #{{ run.runNumber }}
-                </span>
-                <span class="text-sm text-muted">
-                  {{ formatDate(run.performedAt) }}
-                </span>
-                <UBadge
-                  :color="run.isVerified ? 'success' : 'neutral'"
-                  variant="subtle"
-                  size="sm"
-                >
-                  {{ run.isVerified ? 'Verified' : 'Pending' }}
-                </UBadge>
-                <span class="text-xs text-muted">
-                  {{ run.results.length }} result{{ run.results.length !== 1 ? 's' : '' }}
-                </span>
+              <!-- Run summary row -->
+              <div class="flex items-center justify-between py-3">
+                <div class="flex items-center gap-3">
+                  <!-- Run number indicator -->
+                  <div
+                    class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                    :class="run.isVerified
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+                      : 'bg-elevated text-muted'"
+                  >
+                    {{ run.runNumber ?? '?' }}
+                  </div>
+                  <span class="text-sm text-muted">{{ formatDate(run.performedAt) }}</span>
+                  <UBadge
+                    :color="run.isVerified ? 'success' : 'neutral'"
+                    variant="subtle"
+                    size="xs"
+                  >
+                    {{ run.isVerified ? 'Verified' : 'Pending' }}
+                  </UBadge>
+                  <span class="text-xs text-muted">
+                    {{ run.results.length }} result{{ run.results.length !== 1 ? 's' : '' }}
+                  </span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <UButton
+                    v-if="!run.isVerified"
+                    icon="i-lucide-check-circle"
+                    size="xs"
+                    color="success"
+                    variant="ghost"
+                    aria-label="Verify run"
+                    @click="handleVerify(labTest.id, run.id)"
+                  />
+                  <UButton
+                    icon="i-lucide-trash-2"
+                    size="xs"
+                    color="error"
+                    variant="ghost"
+                    aria-label="Delete run"
+                    @click="handleDeleteRun(labTest.id, run.id)"
+                  />
+                  <UButton
+                    :icon="isRunExpanded(labTest.id, run.id) ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+                    size="xs"
+                    color="neutral"
+                    variant="ghost"
+                    :aria-label="isRunExpanded(labTest.id, run.id) ? 'Collapse results' : 'Expand results'"
+                    @click="toggleRunExpanded(labTest.id, run.id)"
+                  />
+                </div>
               </div>
-              <div class="flex items-center gap-1">
-                <UButton
-                  v-if="!run.isVerified"
-                  icon="i-lucide-check-circle"
-                  size="xs"
-                  color="success"
-                  variant="ghost"
-                  aria-label="Verify run"
-                  @click="handleVerify(labTest.id, run.id)"
-                />
-                <UButton
-                  icon="i-lucide-trash-2"
-                  size="xs"
-                  color="error"
-                  variant="ghost"
-                  aria-label="Delete run"
-                  @click="handleDeleteRun(labTest.id, run.id)"
-                />
+
+              <!-- Expanded results table -->
+              <div
+                v-if="isRunExpanded(labTest.id, run.id)"
+                class="pb-3"
+              >
+                <div class="rounded-lg overflow-hidden ring ring-default">
+                  <table class="w-full text-sm">
+                    <thead>
+                      <tr class="bg-elevated">
+                        <th class="text-left px-3 py-2 text-xs font-medium text-muted">
+                          Parameter
+                        </th>
+                        <th class="text-left px-3 py-2 text-xs font-medium text-muted">
+                          Value
+                        </th>
+                        <th class="text-left px-3 py-2 text-xs font-medium text-muted">
+                          Unit
+                        </th>
+                        <th class="px-3 py-2" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr
+                        v-for="result in run.results"
+                        :key="result.id"
+                        class="border-t border-default"
+                      >
+                        <td class="px-3 py-2.5 font-medium text-default">
+                          {{ paramMap[result.parameterId]?.name ?? `#${result.parameterId}` }}
+                        </td>
+                        <td class="px-3 py-2.5 font-semibold text-highlighted tabular-nums">
+                          {{ result.value ?? '—' }}
+                        </td>
+                        <td class="px-3 py-2.5 text-muted text-xs">
+                          {{ paramMap[result.parameterId]?.unitId != null
+                            ? (unitMap[paramMap[result.parameterId]!.unitId!] ?? '')
+                            : '' }}
+                        </td>
+                        <td class="px-3 py-2.5 text-right">
+                          <UButton
+                            icon="i-lucide-pencil"
+                            size="xs"
+                            color="neutral"
+                            variant="ghost"
+                            aria-label="Edit result"
+                            @click="openEditResult(run, result)"
+                          />
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <p
+                    v-if="!run.results.length"
+                    class="text-xs text-muted text-center py-3"
+                  >
+                    No results recorded.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -400,7 +634,6 @@ async function handleDeleteRun(labTestId: number, runId: number) {
           </p>
         </div>
       </template>
-
       <template #footer>
         <div class="flex justify-end gap-2">
           <UButton
@@ -448,7 +681,6 @@ async function handleDeleteRun(labTestId: number, runId: number) {
           </p>
         </div>
       </template>
-
       <template #footer>
         <div class="flex justify-end gap-2">
           <UButton
@@ -464,6 +696,44 @@ async function handleDeleteRun(labTestId: number, runId: number) {
             @click="submitRun"
           >
             Record Run
+          </UButton>
+        </div>
+      </template>
+    </UModal>
+
+    <!-- Edit Result modal -->
+    <UModal
+      v-model:open="editOpen"
+      title="Edit Result"
+      :description="editData ? `Update the value for ${editData.paramName}` : ''"
+    >
+      <template #body>
+        <UFormField
+          :label="editData ? `${editData.paramName}${editData.unit ? ` (${editData.unit})` : ''}` : 'Value'"
+        >
+          <UInput
+            v-if="editData"
+            v-model="editData.value"
+            placeholder="Enter value…"
+            autofocus
+            @keyup.enter="saveEdit"
+          />
+        </UFormField>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UButton
+            color="neutral"
+            variant="outline"
+            @click="editOpen = false"
+          >
+            Cancel
+          </UButton>
+          <UButton
+            :loading="isUpdating"
+            @click="saveEdit"
+          >
+            Save
           </UButton>
         </div>
       </template>
