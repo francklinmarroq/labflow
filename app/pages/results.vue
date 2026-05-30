@@ -46,19 +46,19 @@ const allParameters = computed(() => parameterData.value?.content ?? [])
 const allUnits = computed(() => unitData.value?.content ?? [])
 
 const patientMap = computed(() =>
-  Object.fromEntries(allPatients.value.map(p => [p.id, p.name]))
+  Object.fromEntries(allPatients.value.map((p) => [p.id, p.name]))
 )
 const catalogTestMap = computed(() =>
-  Object.fromEntries(allCatalogTests.value.map(t => [t.id, t.name]))
+  Object.fromEntries(allCatalogTests.value.map((t) => [t.id, t.name]))
 )
 const testConfigMap = computed(() =>
-  Object.fromEntries(allTestConfigs.value.map(tc => [tc.id, tc]))
+  Object.fromEntries(allTestConfigs.value.map((tc) => [tc.id, tc]))
 )
 const paramMap = computed(() =>
-  Object.fromEntries(allParameters.value.map(p => [p.id, p]))
+  Object.fromEntries(allParameters.value.map((p) => [p.id, p]))
 )
 const unitMap = computed(() =>
-  Object.fromEntries(allUnits.value.map(u => [u.id, u.unitSymbol]))
+  Object.fromEntries(allUnits.value.map((u) => [u.id, u.unitSymbol]))
 )
 
 const STATUS_LABELS: Record<string, string> = {
@@ -91,7 +91,7 @@ function formatDateTime(raw: string | null): string {
 }
 
 const orderOptions = computed(() =>
-  orders.value.map(o => ({
+  orders.value.map((o) => ({
     label: `${patientMap.value[o.customerId] ?? '—'} — ${formatDate(o.requestedAt)}`,
     value: o.id
   }))
@@ -100,7 +100,7 @@ const orderOptions = computed(() =>
 const selectedOrderId = ref<number | undefined>(undefined)
 
 const selectedOrder = computed((): LabOrder | null =>
-  orders.value.find(o => o.id === selectedOrderId.value) ?? null
+  orders.value.find((o) => o.id === selectedOrderId.value) ?? null
 )
 
 const orderLabTests = ref<OrderLabTest[]>([])
@@ -110,7 +110,7 @@ const loadingTests = ref(false)
 // Returns the verified run if one exists, otherwise the most recent run
 function getActiveRun(runs: TestRun[]): TestRun | null {
   if (!runs.length) return null
-  return runs.find(r => r.isVerified) ?? runs.at(-1) ?? null
+  return runs.find((r) => r.isVerified) ?? runs.at(-1) ?? null
 }
 
 async function loadOrderData(orderId: number) {
@@ -121,7 +121,7 @@ async function loadOrderData(orderId: number) {
     const tests = await $fetch<OrderLabTest[]>(`/orders/${orderId}/tests`, { baseURL: apiBase })
     orderLabTests.value = tests
     await Promise.all(
-      tests.map(async lt => {
+      tests.map(async (lt) => {
         try {
           runsByLabTestId.value[lt.id] = await getRunsByLabTest(lt.id)
         } catch {
@@ -147,14 +147,14 @@ watch(selectedOrderId, async (id) => {
 })
 
 const testsWithResults = computed(() =>
-  orderLabTests.value.map(lt => ({
+  orderLabTests.value.map((lt) => ({
     labTest: lt,
     activeRun: getActiveRun(runsByLabTestId.value[lt.id] ?? [])
   }))
 )
 
 const completedCount = computed(() =>
-  testsWithResults.value.filter(t => t.activeRun?.isVerified).length
+  testsWithResults.value.filter((t) => t.activeRun?.isVerified).length
 )
 </script>
 

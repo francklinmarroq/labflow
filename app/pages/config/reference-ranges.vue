@@ -35,14 +35,14 @@ const ageRangeOptions = computed(() => [
 // --- Parameter selection ---
 const selectedParameterId = ref<number | undefined>(undefined)
 const selectedParameter = computed(() =>
-  parameters.value.find(p => p.id === selectedParameterId.value) ?? null
+  parameters.value.find((p) => p.id === selectedParameterId.value) ?? null
 )
 
 const search = ref('')
 const filteredParameters = computed(() => {
   const q = search.value.trim().toLowerCase()
   if (!q) return parameters.value
-  return parameters.value.filter(p => p.name.toLowerCase().includes(q))
+  return parameters.value.filter((p) => p.name.toLowerCase().includes(q))
 })
 
 const sectionLabels: Record<string, string> = {

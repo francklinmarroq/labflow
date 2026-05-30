@@ -72,8 +72,8 @@ async function save() {
       toast.add({ title: 'Laboratorio creado', color: 'success' })
     }
     refresh()
-  } catch (e: any) {
-    console.error(e)
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Error al guardar', color: 'error' })
   } finally {
     isSubmitting.value = false

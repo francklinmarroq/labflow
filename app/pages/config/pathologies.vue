@@ -56,8 +56,8 @@ async function save() {
     }
     modalOpen.value = false
     refresh()
-  } catch (e: any) {
-    console.error(e)
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Something went wrong', color: 'error' })
   } finally {
     isSubmitting.value = false
@@ -81,8 +81,8 @@ async function confirmDelete() {
     toast.add({ title: 'Pathology deleted', color: 'success' })
     deleteModalOpen.value = false
     refresh()
-  } catch (e: any) {
-    console.error(e)
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Failed to delete pathology', color: 'error' })
   } finally {
     isDeleting.value = false

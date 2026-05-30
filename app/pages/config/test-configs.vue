@@ -31,13 +31,13 @@ const allParameters = computed(() => paramData.value?.content ?? [])
 const allTests = computed(() => testData.value?.content ?? [])
 
 const parameterMap = computed(() =>
-  Object.fromEntries(allParameters.value.map(p => [p.id, p.name]))
+  Object.fromEntries(allParameters.value.map((p) => [p.id, p.name]))
 )
 const testMap = computed(() =>
-  Object.fromEntries(allTests.value.map(t => [t.id, t.name]))
+  Object.fromEntries(allTests.value.map((t) => [t.id, t.name]))
 )
 const testOptions = computed(() =>
-  allTests.value.map(t => ({ label: t.name, value: t.id }))
+  allTests.value.map((t) => ({ label: t.name, value: t.id }))
 )
 
 const columns: TableColumn<TestConfig>[] = [
@@ -65,7 +65,7 @@ const form = reactive({
 const filteredParameters = computed(() => {
   const q = paramSearch.value.trim().toLowerCase()
   if (!q) return allParameters.value
-  return allParameters.value.filter(p => p.name.toLowerCase().includes(q))
+  return allParameters.value.filter((p) => p.name.toLowerCase().includes(q))
 })
 
 function toggleParameter(id: number) {

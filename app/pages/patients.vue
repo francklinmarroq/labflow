@@ -24,7 +24,7 @@ const patients = computed(() => data.value?.content ?? [])
 const allPathologies = computed(() => pathologyData.value?.content ?? [])
 
 const pathologyMap = computed(() =>
-  Object.fromEntries(allPathologies.value.map(p => [p.id, p.name]))
+  Object.fromEntries(allPathologies.value.map((p) => [p.id, p.name]))
 )
 
 // --- Age helper ---

@@ -28,7 +28,7 @@ const allPatients = computed(() => patientData.value?.content ?? [])
 const allTests = computed(() => testData.value?.content ?? [])
 
 const patientMap = computed(() =>
-  Object.fromEntries(allPatients.value.map(p => [p.id, p.name]))
+  Object.fromEntries(allPatients.value.map((p) => [p.id, p.name]))
 )
 
 function formatDate(raw: string | null): string {

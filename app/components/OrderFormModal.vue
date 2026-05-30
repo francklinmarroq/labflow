@@ -25,7 +25,7 @@ const localPatients = ref<Patient[]>([])
 const allPatients = computed(() => [...props.patients, ...localPatients.value])
 
 const patientMap = computed(() =>
-  Object.fromEntries(allPatients.value.map(p => [p.id, p.name]))
+  Object.fromEntries(allPatients.value.map((p) => [p.id, p.name]))
 )
 
 const patientSearch = ref('')
@@ -97,7 +97,7 @@ watch(() => props.open, async (isOpen) => {
     try {
       const tests = await getOrderTests(props.order.id)
       existingLabTests.value = tests
-      form.testIds = tests.map(t => t.testId)
+      form.testIds = tests.map((t) => t.testId)
     } catch {
       // non-critical
     }
@@ -114,11 +114,11 @@ async function save() {
         notes: form.notes.trim() || null,
         status: form.status
       })
-      const toAdd = form.testIds.filter(tid => !existingLabTests.value.find(lt => lt.testId === tid))
-      const toRemove = existingLabTests.value.filter(lt => !form.testIds.includes(lt.testId))
+      const toAdd = form.testIds.filter((tid) => !existingLabTests.value.find((lt) => lt.testId === tid))
+      const toRemove = existingLabTests.value.filter((lt) => !form.testIds.includes(lt.testId))
       await Promise.all([
-        ...toAdd.map(tid => addTestToOrder(props.order!.id, tid)),
-        ...toRemove.map(lt => removeTestFromOrder(props.order!.id, lt.id))
+        ...toAdd.map((tid) => addTestToOrder(props.order!.id, tid)),
+        ...toRemove.map((lt) => removeTestFromOrder(props.order!.id, lt.id))
       ])
       toast.add({ title: 'Order updated', color: 'success' })
     } else {
@@ -126,7 +126,7 @@ async function save() {
         customerId: form.customerId,
         notes: form.notes.trim() || null
       })
-      await Promise.all(form.testIds.map(tid => addTestToOrder(order.id, tid)))
+      await Promise.all(form.testIds.map((tid) => addTestToOrder(order.id, tid)))
       toast.add({ title: 'Order created', color: 'success' })
     }
     emit('update:open', false)

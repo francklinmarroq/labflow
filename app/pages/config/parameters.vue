@@ -30,10 +30,10 @@ async function loadUnits() {
 
 const parameters = computed(() => data.value?.content ?? [])
 const unitMap = computed(() =>
-  Object.fromEntries(units.value.map(u => [u.id, u.unitSymbol]))
+  Object.fromEntries(units.value.map((u) => [u.id, u.unitSymbol]))
 )
 const unitOptions = computed(() =>
-  units.value.map(u => ({ label: u.unitSymbol, value: u.id }))
+  units.value.map((u) => ({ label: u.unitSymbol, value: u.id }))
 )
 
 const sectionOptions: { label: string, value: ParameterSection }[] = [
@@ -140,11 +140,11 @@ async function confirmDelete() {
 }
 
 function sectionLabel(val: ParameterSection | null) {
-  return sectionOptions.find(o => o.value === val)?.label ?? '—'
+  return sectionOptions.find((o) => o.value === val)?.label ?? '—'
 }
 
 function valueTypeLabel(val: ParameterValueType | null) {
-  return valueTypeOptions.find(o => o.value === val)?.label ?? '—'
+  return valueTypeOptions.find((o) => o.value === val)?.label ?? '—'
 }
 </script>
 
