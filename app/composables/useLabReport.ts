@@ -46,6 +46,7 @@ function getFlag(value: string | null, ranges: ReferenceRange[]): string {
   const num = parseFloat(value)
   if (isNaN(num)) return ''
   const r = ranges[0]
+  if (!r) return ''
   if (r.criticalLow != null && num < r.criticalLow) return 'CC'
   if (r.criticalHigh != null && num > r.criticalHigh) return 'CC'
   if (r.lowerLimit != null && num < r.lowerLimit) return 'L'
@@ -62,6 +63,7 @@ function flagColor(flag: string): string {
 function refText(ranges: ReferenceRange[], unit: string): string {
   if (!ranges.length) return '—'
   const r = ranges[0]
+  if (!r) return '—'
   if (r.interpretationText) return r.interpretationText
   const u = unit ? ` ${unit}` : ''
   if (r.lowerLimit != null && r.upperLimit != null) return `${r.lowerLimit} – ${r.upperLimit}${u}`
