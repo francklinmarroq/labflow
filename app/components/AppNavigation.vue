@@ -29,6 +29,11 @@ const links = [
 
 const configLinks = [
   {
+    label: 'Laboratory',
+    icon: 'i-lucide-building-2',
+    to: '/config/laboratory'
+  },
+  {
     label: 'Units',
     icon: 'i-lucide-scale',
     to: '/config/units'
