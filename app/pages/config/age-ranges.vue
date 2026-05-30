@@ -31,7 +31,7 @@ const selected = ref<AgeRange | null>(null)
 
 type AgeUnit = 'days' | 'months' | 'years'
 const ageUnit = ref<AgeUnit>('days')
-const ageUnitOptions: { label: string; value: AgeUnit }[] = [
+const ageUnitOptions: { label: string, value: AgeUnit }[] = [
   { label: 'Days', value: 'days' },
   { label: 'Months', value: 'months' },
   { label: 'Years', value: 'years' }
@@ -102,8 +102,8 @@ async function save() {
     }
     modalOpen.value = false
     refresh()
-  } catch (e: any) {
-    console.error(e)
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     const msg = e?.data?.message ?? e?.message ?? 'Something went wrong'
     toast.add({ title: msg, color: 'error' })
   } finally {

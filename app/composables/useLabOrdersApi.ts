@@ -27,10 +27,10 @@ export interface LabOrderResponse {
 export function useLabOrdersApi() {
   const { public: { apiBase } } = useRuntimeConfig()
 
-  const createOrder = (body: { customerId: number; notes: string | null }) =>
+  const createOrder = (body: { customerId: number, notes: string | null }) =>
     $fetch<LabOrder>('/orders', { baseURL: apiBase, method: 'POST', body })
 
-  const updateOrder = (id: number, body: { customerId: number; notes: string | null; status: OrderStatus }) =>
+  const updateOrder = (id: number, body: { customerId: number, notes: string | null, status: OrderStatus }) =>
     $fetch<LabOrder>(`/orders/${id}`, { baseURL: apiBase, method: 'PUT', body })
 
   const deleteOrder = (id: number) =>

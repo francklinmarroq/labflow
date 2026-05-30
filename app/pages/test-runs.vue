@@ -71,7 +71,8 @@ const STATUS_LABELS: Record<string, string> = {
   DELIVERED: 'Delivered'
 }
 
-const STATUS_COLORS: Record<string, string> = {
+type UBadgeColor = 'neutral' | 'info' | 'success' | 'primary' | 'secondary'
+const STATUS_COLORS: Record<string, UBadgeColor> = {
   PENDING: 'neutral',
   IN_PROGRESS: 'info',
   COMPLETED: 'success',
@@ -83,12 +84,6 @@ function formatDate(raw: string | null): string {
   if (!raw) return '—'
   const d = new Date(raw)
   return isNaN(d.getTime()) ? raw : d.toLocaleDateString()
-}
-
-function formatDateTime(raw: string | null): string {
-  if (!raw) return '—'
-  const d = new Date(raw)
-  return isNaN(d.getTime()) ? raw : d.toLocaleString()
 }
 
 // Order options — label includes #ID so USelectMenu can filter by both ID and name
@@ -138,7 +133,7 @@ async function loadOrderData(orderId: number) {
     const tests = await $fetch<OrderLabTest[]>(`/orders/${orderId}/tests`, { baseURL: apiBase })
     orderLabTests.value = tests
     await Promise.all(
-      tests.map(async lt => {
+      tests.map(async (lt) => {
         try {
           runsByLabTestId.value[lt.id] = await getRunsByLabTest(lt.id)
         } catch {
@@ -146,7 +141,8 @@ async function loadOrderData(orderId: number) {
         }
       })
     )
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? 'Failed to load tests', color: 'error' })
   } finally {
     loadingTests.value = false
@@ -166,7 +162,7 @@ watch(selectedOrderId, async (id) => {
 const addRunOpen = ref(false)
 const addRunLabTest = ref<OrderLabTest | null>(null)
 const isSubmitting = ref(false)
-const runFormRows = ref<Array<{ parameterId: number; name: string; value: string }>>([])
+const runFormRows = ref<Array<{ parameterId: number, name: string, value: string }>>([])
 
 function openAddRun(labTest: OrderLabTest) {
   const config = labTest.testConfigId != null ? testConfigMap.value[labTest.testConfigId] : null
@@ -194,7 +190,8 @@ async function submitRun() {
     runsByLabTestId.value[ltId] = [...(runsByLabTestId.value[ltId] ?? []), run]
     toast.add({ title: 'Run recorded', color: 'success' })
     addRunOpen.value = false
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Failed to record run', color: 'error' })
   } finally {
     isSubmitting.value = false
@@ -227,7 +224,8 @@ async function saveAssignTemplate() {
     if (idx !== -1) orderLabTests.value[idx] = updated
     toast.add({ title: 'Template assigned', color: 'success' })
     assignTemplateOpen.value = false
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Failed to assign template', color: 'error' })
   } finally {
     isAssigning.value = false
@@ -243,7 +241,8 @@ async function handleVerify(labTestId: number, runId: number) {
       isVerified: r.id === runId ? true : r.isVerified
     }))
     toast.add({ title: 'Run verified', color: 'success' })
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Failed to verify', color: 'error' })
   }
 }
@@ -253,7 +252,8 @@ async function handleDeleteRun(labTestId: number, runId: number) {
     await deleteRun(labTestId, runId)
     runsByLabTestId.value[labTestId] = (runsByLabTestId.value[labTestId] ?? []).filter(r => r.id !== runId)
     toast.add({ title: 'Run deleted', color: 'success' })
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Failed to delete run', color: 'error' })
   }
 }
@@ -298,7 +298,8 @@ async function saveEdit() {
     }
     toast.add({ title: 'Result updated', color: 'success' })
     editOpen.value = false
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Failed to update result', color: 'error' })
   } finally {
     isUpdating.value = false
@@ -358,7 +359,7 @@ async function saveEdit() {
         </p>
         <UBadge
           v-if="selectedOrder.status"
-          :color="STATUS_COLORS[selectedOrder.status] as any"
+          :color="STATUS_COLORS[selectedOrder.status ?? 'PENDING']"
           variant="subtle"
           size="sm"
         >

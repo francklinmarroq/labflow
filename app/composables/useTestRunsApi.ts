@@ -7,7 +7,7 @@ export interface TestRunResult {
 
 export interface TestRun {
   id: number
-  testId: number   // LabTest.id (order line item), NOT the catalog Test.id
+  testId: number // LabTest.id (order line item), NOT the catalog Test.id
   runNumber: number | null
   performedAt: string | null
   isVerified: boolean | null
@@ -20,7 +20,7 @@ export function useTestRunsApi() {
   const getRunsByLabTest = (labTestId: number) =>
     $fetch<TestRun[]>(`/tests/${labTestId}/runs`, { baseURL: apiBase })
 
-  const addRun = (labTestId: number, body: { results: { parameterId: number; value: string }[] }) =>
+  const addRun = (labTestId: number, body: { results: { parameterId: number, value: string }[] }) =>
     $fetch<TestRun>(`/tests/${labTestId}/runs`, { baseURL: apiBase, method: 'POST', body })
 
   const verifyRun = (labTestId: number, runId: number) =>

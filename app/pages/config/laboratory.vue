@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Laboratory } from '~/composables/useLaboratoryApi'
 
-useSeoMeta({ title: 'Laboratory — LabFlow' })
+useSeoMeta({ title: 'Laboratorio — LabFlow' })
 
 const { public: { apiBase } } = useRuntimeConfig()
 const { createLaboratory, updateLaboratory } = useLaboratoryApi()
@@ -14,7 +14,7 @@ const { data: lab, status, refresh } = await useFetch<Laboratory>('/laboratory',
 const isEditing = computed(() => !!lab.value?.id)
 const isSubmitting = ref(false)
 
-const form = reactive<Omit<Laboratory, 'id'>>({
+const form = reactive({
   name: '',
   rtn: '',
   phone: '',
@@ -22,12 +22,12 @@ const form = reactive<Omit<Laboratory, 'id'>>({
   address1: '',
   address2: '',
   cai1: '',
-  cai1ExpirationDate: null,
+  cai1ExpirationDate: '',
   cai1RangeFrom: '',
   cai1RangeTo: '',
   cai1CurrentNumber: '',
   cai2: '',
-  cai2ExpirationDate: null,
+  cai2ExpirationDate: '',
   cai2RangeFrom: '',
   cai2RangeTo: '',
   cai2CurrentNumber: ''
@@ -43,12 +43,12 @@ watch(lab, (val) => {
     address1: val.address1 ?? '',
     address2: val.address2 ?? '',
     cai1: val.cai1 ?? '',
-    cai1ExpirationDate: val.cai1ExpirationDate ?? null,
+    cai1ExpirationDate: val.cai1ExpirationDate ?? '',
     cai1RangeFrom: val.cai1RangeFrom ?? '',
     cai1RangeTo: val.cai1RangeTo ?? '',
     cai1CurrentNumber: val.cai1CurrentNumber ?? '',
     cai2: val.cai2 ?? '',
-    cai2ExpirationDate: val.cai2ExpirationDate ?? null,
+    cai2ExpirationDate: val.cai2ExpirationDate ?? '',
     cai2RangeFrom: val.cai2RangeFrom ?? '',
     cai2RangeTo: val.cai2RangeTo ?? '',
     cai2CurrentNumber: val.cai2CurrentNumber ?? ''
@@ -72,31 +72,31 @@ async function save() {
       toast.add({ title: 'Laboratorio creado', color: 'success' })
     }
     refresh()
-  } catch (e: any) {
-    console.error(e)
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Error al guardar', color: 'error' })
   } finally {
     isSubmitting.value = false
   }
 }
 
-function caiStatus(cai: string | null | undefined, expDate: string | null | undefined, rangeFrom: string | null | undefined, rangeTo: string | null | undefined, current: string | null | undefined) {
-  if (!cai) return null
-  const warnings: string[] = []
-  if (expDate) {
-    const daysLeft = Math.ceil((new Date(expDate).getTime() - Date.now()) / 86400000)
-    if (daysLeft <= 0) warnings.push('CAI vencido')
-    else if (daysLeft <= 30) warnings.push(`Vence en ${daysLeft} días`)
-  }
-  return warnings.length ? warnings.join(' · ') : null
-}
+const cai1Warning = computed(() => {
+  if (!form.cai1) return null
+  if (!form.cai1ExpirationDate) return null
+  const daysLeft = Math.ceil((new Date(form.cai1ExpirationDate).getTime() - Date.now()) / 86400000)
+  if (daysLeft <= 0) return 'CAI vencido'
+  if (daysLeft <= 30) return `Vence en ${daysLeft} días`
+  return null
+})
 
-const cai1Warning = computed(() =>
-  caiStatus(form.cai1, form.cai1ExpirationDate, form.cai1RangeFrom, form.cai1RangeTo, form.cai1CurrentNumber)
-)
-const cai2Warning = computed(() =>
-  caiStatus(form.cai2, form.cai2ExpirationDate, form.cai2RangeFrom, form.cai2RangeTo, form.cai2CurrentNumber)
-)
+const cai2Warning = computed(() => {
+  if (!form.cai2) return null
+  if (!form.cai2ExpirationDate) return null
+  const daysLeft = Math.ceil((new Date(form.cai2ExpirationDate).getTime() - Date.now()) / 86400000)
+  if (daysLeft <= 0) return 'CAI vencido'
+  if (daysLeft <= 30) return `Vence en ${daysLeft} días`
+  return null
+})
 </script>
 
 <template>

@@ -10,7 +10,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:open': [value: boolean]
-  saved: [patient: Patient]
+  'saved': [patient: Patient]
 }>()
 
 const { public: { apiBase } } = useRuntimeConfig()
@@ -104,7 +104,8 @@ async function save() {
     toast.add({ title: props.isEditing ? 'Patient updated' : 'Patient created', color: 'success' })
     emit('update:open', false)
     emit('saved', patient)
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Something went wrong', color: 'error' })
   } finally {
     isSubmitting.value = false

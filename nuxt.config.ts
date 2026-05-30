@@ -4,21 +4,21 @@ export default defineNuxtConfig({
     '@nuxt/ui'
   ],
 
+  ssr: false,
+
   devtools: {
     enabled: true
   },
 
-  ssr: false,
-
   css: ['~/assets/css/main.css'],
-
-  compatibilityDate: '2025-01-15',
 
   runtimeConfig: {
     public: {
       apiBase: process.env.LABFLOW_PUBLIC_API_BASE ?? 'http://localhost:8080/api/v1'
     }
   },
+
+  compatibilityDate: '2025-01-15',
 
   eslint: {
     config: {

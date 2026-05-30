@@ -143,7 +143,10 @@ async function confirmDelete() {
       :description="isEditing ? 'Update the unit symbol.' : 'Enter a symbol for the new unit.'"
     >
       <template #body>
-        <UFormField label="Symbol" required>
+        <UFormField
+          label="Symbol"
+          required
+        >
           <UInput
             v-model="form.unitSymbol"
             placeholder="e.g. mg/dL"

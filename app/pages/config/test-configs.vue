@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import type { TestConfig, TestConfigResponse } from '~/composables/useTestConfigsApi'
-import type { Parameter, ParameterResponse } from '~/composables/useParametersApi'
-import type { LabTest, LabTestResponse } from '~/composables/useTestsApi'
+import type { ParameterResponse } from '~/composables/useParametersApi'
+import type { LabTestResponse } from '~/composables/useTestsApi'
 
 useSeoMeta({ title: 'Test Templates — LabFlow' })
 
@@ -123,8 +123,8 @@ async function save() {
     }
     modalOpen.value = false
     refresh()
-  } catch (e: any) {
-    console.error(e)
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Something went wrong', color: 'error' })
   } finally {
     isSubmitting.value = false
@@ -148,8 +148,8 @@ async function confirmDelete() {
     toast.add({ title: 'Test template deleted', color: 'success' })
     deleteModalOpen.value = false
     refresh()
-  } catch (e: any) {
-    console.error(e)
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Failed to delete test template', color: 'error' })
   } finally {
     isDeleting.value = false
@@ -253,7 +253,10 @@ async function confirmDelete() {
     >
       <template #body>
         <div class="flex flex-col gap-4">
-          <UFormField label="Test" required>
+          <UFormField
+            label="Test"
+            required
+          >
             <USelect
               v-model="form.testId"
               :items="testOptions"
@@ -261,7 +264,10 @@ async function confirmDelete() {
             />
           </UFormField>
 
-          <UFormField label="Internal Name" required>
+          <UFormField
+            label="Internal Name"
+            required
+          >
             <UInput
               v-model="form.name"
               placeholder="e.g. Glucose Beckman Analyzer 1"

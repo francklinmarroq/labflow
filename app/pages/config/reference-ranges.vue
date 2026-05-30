@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
-import type { Parameter, ParameterResponse, ParameterSection } from '~/composables/useParametersApi'
+import type { ParameterResponse, ParameterSection } from '~/composables/useParametersApi'
 import type { ReferenceRange, ReferenceRangeResponse, Sex } from '~/composables/useReferenceRangesApi'
-import type { AgeRange, AgeRangeResponse } from '~/composables/useAgeRangesApi'
+import type { AgeRangeResponse } from '~/composables/useAgeRangesApi'
 
 useSeoMeta({ title: 'Reference Ranges — LabFlow' })
 
@@ -60,7 +60,10 @@ const ranges = ref<ReferenceRange[]>([])
 const isLoadingRanges = ref(false)
 
 async function loadRanges() {
-  if (!selectedParameterId.value) { ranges.value = []; return }
+  if (!selectedParameterId.value) {
+    ranges.value = []
+    return
+  }
   isLoadingRanges.value = true
   try {
     const res = await $fetch<ReferenceRangeResponse>(
@@ -68,8 +71,8 @@ async function loadRanges() {
       { baseURL: apiBase, params: { pageSize: 100 } }
     )
     ranges.value = res.content
-  } catch (e: any) {
-    console.error(e)
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Failed to load reference ranges', color: 'error' })
   } finally {
     isLoadingRanges.value = false
@@ -169,8 +172,8 @@ async function save() {
     }
     modalOpen.value = false
     await loadRanges()
-  } catch (e: any) {
-    console.error(e)
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Something went wrong', color: 'error' })
   } finally {
     isSubmitting.value = false
@@ -194,8 +197,8 @@ async function confirmDelete() {
     toast.add({ title: 'Reference range deleted', color: 'success' })
     deleteModalOpen.value = false
     await loadRanges()
-  } catch (e: any) {
-    console.error(e)
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Failed to delete reference range', color: 'error' })
   } finally {
     isDeleting.value = false
@@ -214,7 +217,10 @@ async function confirmDelete() {
       </p>
     </div>
 
-    <div class="flex gap-4" style="height: calc(100vh - 13rem)">
+    <div
+      class="flex gap-4"
+      style="height: calc(100vh - 13rem)"
+    >
       <!-- Left panel: parameter list -->
       <div class="w-64 shrink-0 flex flex-col rounded-lg ring ring-default bg-default overflow-hidden">
         <div class="p-3 border-b border-default shrink-0">
@@ -238,7 +244,9 @@ async function confirmDelete() {
             @click="selectedParameterId = param.id"
           >
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium truncate">{{ param.name }}</p>
+              <p class="text-sm font-medium truncate">
+                {{ param.name }}
+              </p>
               <p
                 class="text-xs truncate"
                 :class="selectedParameterId === param.id ? 'text-white/70' : 'text-muted'"
@@ -271,7 +279,11 @@ async function confirmDelete() {
           class="flex-1 flex items-center justify-center rounded-lg ring ring-default bg-default"
         >
           <div class="text-center">
-            <UIcon name="i-lucide-arrow-left" class="text-muted mb-3" size="28" />
+            <UIcon
+              name="i-lucide-arrow-left"
+              class="text-muted mb-3"
+              size="28"
+            />
             <p class="text-sm font-medium text-highlighted">
               Select a parameter
             </p>
