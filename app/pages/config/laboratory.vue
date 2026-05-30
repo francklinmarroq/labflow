@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Laboratory } from '~/composables/useLaboratoryApi'
 
-useSeoMeta({ title: 'Laboratory — LabFlow' })
+useSeoMeta({ title: 'Laboratorio — LabFlow' })
 
 const { public: { apiBase } } = useRuntimeConfig()
 const { createLaboratory, updateLaboratory } = useLaboratoryApi()
@@ -80,23 +80,23 @@ async function save() {
   }
 }
 
-function caiStatus(cai: string | null | undefined, expDate: string | null | undefined, rangeFrom: string | null | undefined, rangeTo: string | null | undefined, current: string | null | undefined) {
-  if (!cai) return null
-  const warnings: string[] = []
-  if (expDate) {
-    const daysLeft = Math.ceil((new Date(expDate).getTime() - Date.now()) / 86400000)
-    if (daysLeft <= 0) warnings.push('CAI vencido')
-    else if (daysLeft <= 30) warnings.push(`Vence en ${daysLeft} días`)
-  }
-  return warnings.length ? warnings.join(' · ') : null
-}
+const cai1Warning = computed(() => {
+  if (!form.cai1) return null
+  if (!form.cai1ExpirationDate) return null
+  const daysLeft = Math.ceil((new Date(form.cai1ExpirationDate).getTime() - Date.now()) / 86400000)
+  if (daysLeft <= 0) return 'CAI vencido'
+  if (daysLeft <= 30) return `Vence en ${daysLeft} días`
+  return null
+})
 
-const cai1Warning = computed(() =>
-  caiStatus(form.cai1, form.cai1ExpirationDate, form.cai1RangeFrom, form.cai1RangeTo, form.cai1CurrentNumber)
-)
-const cai2Warning = computed(() =>
-  caiStatus(form.cai2, form.cai2ExpirationDate, form.cai2RangeFrom, form.cai2RangeTo, form.cai2CurrentNumber)
-)
+const cai2Warning = computed(() => {
+  if (!form.cai2) return null
+  if (!form.cai2ExpirationDate) return null
+  const daysLeft = Math.ceil((new Date(form.cai2ExpirationDate).getTime() - Date.now()) / 86400000)
+  if (daysLeft <= 0) return 'CAI vencido'
+  if (daysLeft <= 30) return `Vence en ${daysLeft} días`
+  return null
+})
 </script>
 
 <template>

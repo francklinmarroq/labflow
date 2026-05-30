@@ -1,11 +1,3 @@
-export interface CaiBlock {
-  cai: string | null
-  expirationDate: string | null
-  rangeFrom: string | null
-  rangeTo: string | null
-  currentNumber: string | null
-}
-
 export interface Laboratory {
   id: number
   name: string

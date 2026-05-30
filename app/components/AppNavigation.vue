@@ -29,7 +29,7 @@ const links = [
 
 const configLinks = [
   {
-    label: 'Laboratory',
+    label: 'Laboratorio',
     icon: 'i-lucide-building-2',
     to: '/config/laboratory'
   },
