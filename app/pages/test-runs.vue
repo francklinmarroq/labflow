@@ -48,19 +48,19 @@ const allParameters = computed(() => parameterData.value?.content ?? [])
 const allUnits = computed(() => unitData.value?.content ?? [])
 
 const patientMap = computed(() =>
-  Object.fromEntries(allPatients.value.map(p => [p.id, p.name]))
+  Object.fromEntries(allPatients.value.map((p) => [p.id, p.name]))
 )
 const catalogTestMap = computed(() =>
-  Object.fromEntries(allCatalogTests.value.map(t => [t.id, t.name]))
+  Object.fromEntries(allCatalogTests.value.map((t) => [t.id, t.name]))
 )
 const testConfigMap = computed(() =>
-  Object.fromEntries(allTestConfigs.value.map(tc => [tc.id, tc]))
+  Object.fromEntries(allTestConfigs.value.map((tc) => [tc.id, tc]))
 )
 const paramMap = computed(() =>
-  Object.fromEntries(allParameters.value.map(p => [p.id, p]))
+  Object.fromEntries(allParameters.value.map((p) => [p.id, p]))
 )
 const unitMap = computed(() =>
-  Object.fromEntries(allUnits.value.map(u => [u.id, u.unitSymbol]))
+  Object.fromEntries(allUnits.value.map((u) => [u.id, u.unitSymbol]))
 )
 
 const STATUS_LABELS: Record<string, string> = {
@@ -71,7 +71,8 @@ const STATUS_LABELS: Record<string, string> = {
   DELIVERED: 'Delivered'
 }
 
-const STATUS_COLORS: Record<string, string> = {
+type UBadgeColor = 'neutral' | 'info' | 'success' | 'primary' | 'secondary'
+const STATUS_COLORS: Record<string, UBadgeColor> = {
   PENDING: 'neutral',
   IN_PROGRESS: 'info',
   COMPLETED: 'success',
@@ -93,7 +94,7 @@ function formatDateTime(raw: string | null): string {
 
 // Order options — label includes #ID so USelectMenu can filter by both ID and name
 const orderOptions = computed(() =>
-  orders.value.map(o => ({
+  orders.value.map((o) => ({
     label: `#${o.id} — ${patientMap.value[o.customerId] ?? '—'} — ${formatDate(o.requestedAt)}`,
     value: o.id
   }))
@@ -109,7 +110,7 @@ onMounted(() => {
 })
 
 const selectedOrder = computed((): LabOrder | null =>
-  orders.value.find(o => o.id === selectedOrderId.value) ?? null
+  orders.value.find((o) => o.id === selectedOrderId.value) ?? null
 )
 
 // Dynamic state
@@ -138,7 +139,7 @@ async function loadOrderData(orderId: number) {
     const tests = await $fetch<OrderLabTest[]>(`/orders/${orderId}/tests`, { baseURL: apiBase })
     orderLabTests.value = tests
     await Promise.all(
-      tests.map(async lt => {
+      tests.map(async (lt) => {
         try {
           runsByLabTestId.value[lt.id] = await getRunsByLabTest(lt.id)
         } catch {
@@ -146,7 +147,8 @@ async function loadOrderData(orderId: number) {
         }
       })
     )
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? 'Failed to load tests', color: 'error' })
   } finally {
     loadingTests.value = false
@@ -166,7 +168,7 @@ watch(selectedOrderId, async (id) => {
 const addRunOpen = ref(false)
 const addRunLabTest = ref<OrderLabTest | null>(null)
 const isSubmitting = ref(false)
-const runFormRows = ref<Array<{ parameterId: number; name: string; value: string }>>([])
+const runFormRows = ref<Array<{ parameterId: number, name: string, value: string }>>([])
 
 function openAddRun(labTest: OrderLabTest) {
   const config = labTest.testConfigId != null ? testConfigMap.value[labTest.testConfigId] : null
@@ -175,7 +177,7 @@ function openAddRun(labTest: OrderLabTest) {
     return
   }
   addRunLabTest.value = labTest
-  runFormRows.value = config.parameterIds.map(pid => ({
+  runFormRows.value = config.parameterIds.map((pid) => ({
     parameterId: pid,
     name: paramMap.value[pid]?.name ?? `#${pid}`,
     value: ''
@@ -188,13 +190,14 @@ async function submitRun() {
   isSubmitting.value = true
   try {
     const run = await addRun(addRunLabTest.value.id, {
-      results: runFormRows.value.map(r => ({ parameterId: r.parameterId, value: r.value }))
+      results: runFormRows.value.map((r) => ({ parameterId: r.parameterId, value: r.value }))
     })
     const ltId = addRunLabTest.value.id
     runsByLabTestId.value[ltId] = [...(runsByLabTestId.value[ltId] ?? []), run]
     toast.add({ title: 'Run recorded', color: 'success' })
     addRunOpen.value = false
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Failed to record run', color: 'error' })
   } finally {
     isSubmitting.value = false
@@ -209,7 +212,7 @@ const isAssigning = ref(false)
 
 const templatesForAssign = computed(() => {
   if (!assignLabTest.value) return []
-  return allTestConfigs.value.filter(tc => tc.testId === assignLabTest.value!.testId)
+  return allTestConfigs.value.filter((tc) => tc.testId === assignLabTest.value!.testId)
 })
 
 function openAssignTemplate(labTest: OrderLabTest) {
@@ -223,11 +226,12 @@ async function saveAssignTemplate() {
   isAssigning.value = true
   try {
     const updated = await assignTestConfig(selectedOrderId.value, assignLabTest.value.id, assignConfigId.value)
-    const idx = orderLabTests.value.findIndex(lt => lt.id === updated.id)
+    const idx = orderLabTests.value.findIndex((lt) => lt.id === updated.id)
     if (idx !== -1) orderLabTests.value[idx] = updated
     toast.add({ title: 'Template assigned', color: 'success' })
     assignTemplateOpen.value = false
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Failed to assign template', color: 'error' })
   } finally {
     isAssigning.value = false
@@ -238,12 +242,13 @@ async function saveAssignTemplate() {
 async function handleVerify(labTestId: number, runId: number) {
   try {
     await verifyRun(labTestId, runId)
-    runsByLabTestId.value[labTestId] = (runsByLabTestId.value[labTestId] ?? []).map(r => ({
+    runsByLabTestId.value[labTestId] = (runsByLabTestId.value[labTestId] ?? []).map((r) => ({
       ...r,
       isVerified: r.id === runId ? true : r.isVerified
     }))
     toast.add({ title: 'Run verified', color: 'success' })
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Failed to verify', color: 'error' })
   }
 }
@@ -251,9 +256,10 @@ async function handleVerify(labTestId: number, runId: number) {
 async function handleDeleteRun(labTestId: number, runId: number) {
   try {
     await deleteRun(labTestId, runId)
-    runsByLabTestId.value[labTestId] = (runsByLabTestId.value[labTestId] ?? []).filter(r => r.id !== runId)
+    runsByLabTestId.value[labTestId] = (runsByLabTestId.value[labTestId] ?? []).filter((r) => r.id !== runId)
     toast.add({ title: 'Run deleted', color: 'success' })
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Failed to delete run', color: 'error' })
   }
 }
@@ -261,10 +267,10 @@ async function handleDeleteRun(labTestId: number, runId: number) {
 // Edit result (merged from results.vue)
 const editOpen = ref(false)
 const editData = ref<{
-  runId: number
-  resultId: number
-  paramName: string
-  unit: string
+  runId: number,
+  resultId: number,
+  paramName: string,
+  unit: string,
   value: string
 } | null>(null)
 const isUpdating = ref(false)
@@ -288,17 +294,18 @@ async function saveEdit() {
     const updated = await updateResult(editData.value.runId, editData.value.resultId, editData.value.value)
     for (const lt of orderLabTests.value) {
       const runs = runsByLabTestId.value[lt.id] ?? []
-      const runIdx = runs.findIndex(r => r.id === updated.testRunId)
+      const runIdx = runs.findIndex((r) => r.id === updated.testRunId)
       if (runIdx !== -1) {
         const run = runs[runIdx]!
-        const resultIdx = run.results.findIndex(r => r.id === updated.id)
+        const resultIdx = run.results.findIndex((r) => r.id === updated.id)
         if (resultIdx !== -1) run.results[resultIdx] = updated
         break
       }
     }
     toast.add({ title: 'Result updated', color: 'success' })
     editOpen.value = false
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Failed to update result', color: 'error' })
   } finally {
     isUpdating.value = false
@@ -358,7 +365,7 @@ async function saveEdit() {
         </p>
         <UBadge
           v-if="selectedOrder.status"
-          :color="STATUS_COLORS[selectedOrder.status] as any"
+          :color="STATUS_COLORS[selectedOrder.status ?? 'PENDING']"
           variant="subtle"
           size="sm"
         >

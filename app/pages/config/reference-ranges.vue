@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
-import type { Parameter, ParameterResponse, ParameterSection } from '~/composables/useParametersApi'
+import type { ParameterResponse, ParameterSection } from '~/composables/useParametersApi'
 import type { ReferenceRange, ReferenceRangeResponse, Sex } from '~/composables/useReferenceRangesApi'
 import type { AgeRange, AgeRangeResponse } from '~/composables/useAgeRangesApi'
 
@@ -68,8 +68,8 @@ async function loadRanges() {
       { baseURL: apiBase, params: { pageSize: 100 } }
     )
     ranges.value = res.content
-  } catch (e: any) {
-    console.error(e)
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Failed to load reference ranges', color: 'error' })
   } finally {
     isLoadingRanges.value = false
@@ -169,8 +169,8 @@ async function save() {
     }
     modalOpen.value = false
     await loadRanges()
-  } catch (e: any) {
-    console.error(e)
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Something went wrong', color: 'error' })
   } finally {
     isSubmitting.value = false
@@ -194,8 +194,8 @@ async function confirmDelete() {
     toast.add({ title: 'Reference range deleted', color: 'success' })
     deleteModalOpen.value = false
     await loadRanges()
-  } catch (e: any) {
-    console.error(e)
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Failed to delete reference range', color: 'error' })
   } finally {
     isDeleting.value = false

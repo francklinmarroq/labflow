@@ -45,7 +45,7 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   DELIVERED: 'Delivered'
 }
 
-const STATUS_COLORS: Record<OrderStatus, string> = {
+const STATUS_COLORS: Record<OrderStatus, 'neutral' | 'info' | 'success' | 'primary' | 'secondary'> = {
   PENDING: 'neutral',
   IN_PROGRESS: 'info',
   COMPLETED: 'success',
@@ -67,12 +67,12 @@ type ViewMode = 'kanban' | 'list'
 const viewMode = ref<ViewMode>('kanban')
 
 const kanbanColumns = computed(() =>
-  STATUS_ORDER.map(s => ({
+  STATUS_ORDER.map((s) => ({
     status: s,
     label: STATUS_LABELS[s],
     color: STATUS_COLORS[s],
     dot: STATUS_DOTS[s],
-    orders: orders.value.filter(o => (o.status ?? 'PENDING') === s)
+    orders: orders.value.filter((o) => (o.status ?? 'PENDING') === s)
   }))
 )
 
@@ -80,7 +80,7 @@ const searchQuery = ref('')
 const filteredOrders = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
   if (!q) return orders.value
-  return orders.value.filter(o => {
+  return orders.value.filter((o) => {
     const name = (patientMap.value[o.customerId] ?? '').toLowerCase()
     return name.includes(q) || String(o.id).includes(q)
   })
@@ -136,7 +136,7 @@ async function onDrop(e: DragEvent, targetStatus: OrderStatus) {
   const orderId = draggingOrderId.value
   draggingOrderId.value = null
   if (!orderId) return
-  const order = orders.value.find(o => o.id === orderId)
+  const order = orders.value.find((o) => o.id === orderId)
   if (!order || (order.status ?? 'PENDING') === targetStatus) return
   try {
     await updateOrder(order.id, {
@@ -146,7 +146,8 @@ async function onDrop(e: DragEvent, targetStatus: OrderStatus) {
     })
     await refresh()
     toast.add({ title: `Moved to ${STATUS_LABELS[targetStatus]}`, color: 'success' })
-  } catch (err: any) {
+  } catch (error: unknown) {
+    const err = error as { data?: { message?: string }, message?: string }
     toast.add({ title: err?.data?.message ?? 'Failed to update status', color: 'error' })
   }
 }
@@ -185,7 +186,8 @@ async function confirmDelete() {
     toast.add({ title: 'Order deleted', color: 'success' })
     deleteModalOpen.value = false
     refresh()
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Failed to delete order', color: 'error' })
   } finally {
     isDeleting.value = false
@@ -389,7 +391,7 @@ async function confirmDelete() {
         <template #status-cell="{ row }">
           <UBadge
             v-if="row.original.status"
-            :color="STATUS_COLORS[row.original.status] as any"
+            :color="STATUS_COLORS[row.original.status ?? 'PENDING']"
             variant="subtle"
             size="sm"
           >

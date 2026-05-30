@@ -20,7 +20,7 @@ export function useTestRunsApi() {
   const getRunsByLabTest = (labTestId: number) =>
     $fetch<TestRun[]>(`/tests/${labTestId}/runs`, { baseURL: apiBase })
 
-  const addRun = (labTestId: number, body: { results: { parameterId: number; value: string }[] }) =>
+  const addRun = (labTestId: number, body: { results: { parameterId: number, value: string }[] }) =>
     $fetch<TestRun>(`/tests/${labTestId}/runs`, { baseURL: apiBase, method: 'POST', body })
 
   const verifyRun = (labTestId: number, runId: number) =>

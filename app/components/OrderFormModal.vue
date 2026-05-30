@@ -14,7 +14,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:open': [value: boolean]
-  saved: []
+  'saved': []
 }>()
 
 const { createOrder, updateOrder, getOrderTests, addTestToOrder, removeTestFromOrder } = useLabOrdersApi()
@@ -44,8 +44,8 @@ const filteredPatients = computed(() => {
   const q = patientSearch.value.trim().toLowerCase()
   if (!q) return allPatients.value
   return allPatients.value.filter((p: Patient) =>
-    p.name.toLowerCase().includes(q) ||
-    (p.nationalIdNumber?.toLowerCase().includes(q) ?? false)
+    p.name.toLowerCase().includes(q)
+    || (p.nationalIdNumber?.toLowerCase().includes(q) ?? false)
   )
 })
 
@@ -131,7 +131,8 @@ async function save() {
     }
     emit('update:open', false)
     emit('saved')
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Something went wrong', color: 'error' })
   } finally {
     isSubmitting.value = false

@@ -4,11 +4,11 @@ export default defineNuxtConfig({
     '@nuxt/ui'
   ],
 
+  ssr: false,
+
   devtools: {
     enabled: true
   },
-
-  ssr: false,
 
   css: ['~/assets/css/main.css'],
 

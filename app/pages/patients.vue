@@ -50,10 +50,10 @@ const searchQuery = ref('')
 const filteredPatients = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
   if (!q) return patients.value
-  return patients.value.filter(p =>
-    p.name.toLowerCase().includes(q) ||
-    p.nationalIdNumber?.toLowerCase().includes(q) ||
-    p.phone?.includes(q)
+  return patients.value.filter((p) =>
+    p.name.toLowerCase().includes(q)
+    || p.nationalIdNumber?.toLowerCase().includes(q)
+    || p.phone?.includes(q)
   )
 })
 
@@ -92,7 +92,8 @@ async function confirmDelete() {
     toast.add({ title: 'Patient deleted', color: 'success' })
     deleteModalOpen.value = false
     refresh()
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? e?.message ?? 'Failed to delete patient', color: 'error' })
   } finally {
     isDeleting.value = false

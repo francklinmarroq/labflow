@@ -69,7 +69,8 @@ const STATUS_LABELS: Record<string, string> = {
   DELIVERED: 'Delivered'
 }
 
-const STATUS_COLORS: Record<string, string> = {
+type UBadgeColor = 'neutral' | 'info' | 'success' | 'primary' | 'secondary'
+const STATUS_COLORS: Record<string, UBadgeColor> = {
   PENDING: 'neutral',
   IN_PROGRESS: 'info',
   COMPLETED: 'success',
@@ -128,7 +129,8 @@ async function loadOrderData(orderId: number) {
         }
       })
     )
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? 'Failed to load results', color: 'error' })
   } finally {
     loadingTests.value = false
@@ -234,7 +236,7 @@ const completedCount = computed(() =>
             </p>
             <UBadge
               v-if="selectedOrder.status"
-              :color="STATUS_COLORS[selectedOrder.status] as any"
+              :color="STATUS_COLORS[selectedOrder.status ?? 'PENDING']"
               variant="subtle"
               size="sm"
             >
