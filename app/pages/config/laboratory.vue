@@ -14,7 +14,7 @@ const { data: lab, status, refresh } = await useFetch<Laboratory>('/laboratory',
 const isEditing = computed(() => !!lab.value?.id)
 const isSubmitting = ref(false)
 
-const form = reactive<Omit<Laboratory, 'id'>>({
+const form = reactive({
   name: '',
   rtn: '',
   phone: '',
@@ -22,12 +22,12 @@ const form = reactive<Omit<Laboratory, 'id'>>({
   address1: '',
   address2: '',
   cai1: '',
-  cai1ExpirationDate: null,
+  cai1ExpirationDate: '',
   cai1RangeFrom: '',
   cai1RangeTo: '',
   cai1CurrentNumber: '',
   cai2: '',
-  cai2ExpirationDate: null,
+  cai2ExpirationDate: '',
   cai2RangeFrom: '',
   cai2RangeTo: '',
   cai2CurrentNumber: ''
@@ -43,12 +43,12 @@ watch(lab, (val) => {
     address1: val.address1 ?? '',
     address2: val.address2 ?? '',
     cai1: val.cai1 ?? '',
-    cai1ExpirationDate: val.cai1ExpirationDate ?? null,
+    cai1ExpirationDate: val.cai1ExpirationDate ?? '',
     cai1RangeFrom: val.cai1RangeFrom ?? '',
     cai1RangeTo: val.cai1RangeTo ?? '',
     cai1CurrentNumber: val.cai1CurrentNumber ?? '',
     cai2: val.cai2 ?? '',
-    cai2ExpirationDate: val.cai2ExpirationDate ?? null,
+    cai2ExpirationDate: val.cai2ExpirationDate ?? '',
     cai2RangeFrom: val.cai2RangeFrom ?? '',
     cai2RangeTo: val.cai2RangeTo ?? '',
     cai2CurrentNumber: val.cai2CurrentNumber ?? ''

@@ -28,7 +28,7 @@ const allPatients = computed(() => patientData.value?.content ?? [])
 const allTests = computed(() => testData.value?.content ?? [])
 
 const patientMap = computed(() =>
-  Object.fromEntries(allPatients.value.map((p) => [p.id, p.name]))
+  Object.fromEntries(allPatients.value.map(p => [p.id, p.name]))
 )
 
 function formatDate(raw: string | null): string {
@@ -67,12 +67,12 @@ type ViewMode = 'kanban' | 'list'
 const viewMode = ref<ViewMode>('kanban')
 
 const kanbanColumns = computed(() =>
-  STATUS_ORDER.map((s) => ({
+  STATUS_ORDER.map(s => ({
     status: s,
     label: STATUS_LABELS[s],
     color: STATUS_COLORS[s],
     dot: STATUS_DOTS[s],
-    orders: orders.value.filter((o) => (o.status ?? 'PENDING') === s)
+    orders: orders.value.filter(o => (o.status ?? 'PENDING') === s)
   }))
 )
 
@@ -136,7 +136,7 @@ async function onDrop(e: DragEvent, targetStatus: OrderStatus) {
   const orderId = draggingOrderId.value
   draggingOrderId.value = null
   if (!orderId) return
-  const order = orders.value.find((o) => o.id === orderId)
+  const order = orders.value.find(o => o.id === orderId)
   if (!order || (order.status ?? 'PENDING') === targetStatus) return
   try {
     await updateOrder(order.id, {

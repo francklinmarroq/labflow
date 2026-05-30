@@ -48,19 +48,19 @@ const allParameters = computed(() => parameterData.value?.content ?? [])
 const allUnits = computed(() => unitData.value?.content ?? [])
 
 const patientMap = computed(() =>
-  Object.fromEntries(allPatients.value.map((p) => [p.id, p.name]))
+  Object.fromEntries(allPatients.value.map(p => [p.id, p.name]))
 )
 const catalogTestMap = computed(() =>
-  Object.fromEntries(allCatalogTests.value.map((t) => [t.id, t.name]))
+  Object.fromEntries(allCatalogTests.value.map(t => [t.id, t.name]))
 )
 const testConfigMap = computed(() =>
-  Object.fromEntries(allTestConfigs.value.map((tc) => [tc.id, tc]))
+  Object.fromEntries(allTestConfigs.value.map(tc => [tc.id, tc]))
 )
 const paramMap = computed(() =>
-  Object.fromEntries(allParameters.value.map((p) => [p.id, p]))
+  Object.fromEntries(allParameters.value.map(p => [p.id, p]))
 )
 const unitMap = computed(() =>
-  Object.fromEntries(allUnits.value.map((u) => [u.id, u.unitSymbol]))
+  Object.fromEntries(allUnits.value.map(u => [u.id, u.unitSymbol]))
 )
 
 const STATUS_LABELS: Record<string, string> = {
@@ -86,15 +86,9 @@ function formatDate(raw: string | null): string {
   return isNaN(d.getTime()) ? raw : d.toLocaleDateString()
 }
 
-function formatDateTime(raw: string | null): string {
-  if (!raw) return '—'
-  const d = new Date(raw)
-  return isNaN(d.getTime()) ? raw : d.toLocaleString()
-}
-
 // Order options — label includes #ID so USelectMenu can filter by both ID and name
 const orderOptions = computed(() =>
-  orders.value.map((o) => ({
+  orders.value.map(o => ({
     label: `#${o.id} — ${patientMap.value[o.customerId] ?? '—'} — ${formatDate(o.requestedAt)}`,
     value: o.id
   }))
@@ -110,7 +104,7 @@ onMounted(() => {
 })
 
 const selectedOrder = computed((): LabOrder | null =>
-  orders.value.find((o) => o.id === selectedOrderId.value) ?? null
+  orders.value.find(o => o.id === selectedOrderId.value) ?? null
 )
 
 // Dynamic state
@@ -177,7 +171,7 @@ function openAddRun(labTest: OrderLabTest) {
     return
   }
   addRunLabTest.value = labTest
-  runFormRows.value = config.parameterIds.map((pid) => ({
+  runFormRows.value = config.parameterIds.map(pid => ({
     parameterId: pid,
     name: paramMap.value[pid]?.name ?? `#${pid}`,
     value: ''
@@ -190,7 +184,7 @@ async function submitRun() {
   isSubmitting.value = true
   try {
     const run = await addRun(addRunLabTest.value.id, {
-      results: runFormRows.value.map((r) => ({ parameterId: r.parameterId, value: r.value }))
+      results: runFormRows.value.map(r => ({ parameterId: r.parameterId, value: r.value }))
     })
     const ltId = addRunLabTest.value.id
     runsByLabTestId.value[ltId] = [...(runsByLabTestId.value[ltId] ?? []), run]
@@ -212,7 +206,7 @@ const isAssigning = ref(false)
 
 const templatesForAssign = computed(() => {
   if (!assignLabTest.value) return []
-  return allTestConfigs.value.filter((tc) => tc.testId === assignLabTest.value!.testId)
+  return allTestConfigs.value.filter(tc => tc.testId === assignLabTest.value!.testId)
 })
 
 function openAssignTemplate(labTest: OrderLabTest) {
@@ -226,7 +220,7 @@ async function saveAssignTemplate() {
   isAssigning.value = true
   try {
     const updated = await assignTestConfig(selectedOrderId.value, assignLabTest.value.id, assignConfigId.value)
-    const idx = orderLabTests.value.findIndex((lt) => lt.id === updated.id)
+    const idx = orderLabTests.value.findIndex(lt => lt.id === updated.id)
     if (idx !== -1) orderLabTests.value[idx] = updated
     toast.add({ title: 'Template assigned', color: 'success' })
     assignTemplateOpen.value = false
@@ -242,7 +236,7 @@ async function saveAssignTemplate() {
 async function handleVerify(labTestId: number, runId: number) {
   try {
     await verifyRun(labTestId, runId)
-    runsByLabTestId.value[labTestId] = (runsByLabTestId.value[labTestId] ?? []).map((r) => ({
+    runsByLabTestId.value[labTestId] = (runsByLabTestId.value[labTestId] ?? []).map(r => ({
       ...r,
       isVerified: r.id === runId ? true : r.isVerified
     }))
@@ -256,7 +250,7 @@ async function handleVerify(labTestId: number, runId: number) {
 async function handleDeleteRun(labTestId: number, runId: number) {
   try {
     await deleteRun(labTestId, runId)
-    runsByLabTestId.value[labTestId] = (runsByLabTestId.value[labTestId] ?? []).filter((r) => r.id !== runId)
+    runsByLabTestId.value[labTestId] = (runsByLabTestId.value[labTestId] ?? []).filter(r => r.id !== runId)
     toast.add({ title: 'Run deleted', color: 'success' })
   } catch (error: unknown) {
     const e = error as { data?: { message?: string }, message?: string }
@@ -267,10 +261,10 @@ async function handleDeleteRun(labTestId: number, runId: number) {
 // Edit result (merged from results.vue)
 const editOpen = ref(false)
 const editData = ref<{
-  runId: number,
-  resultId: number,
-  paramName: string,
-  unit: string,
+  runId: number
+  resultId: number
+  paramName: string
+  unit: string
   value: string
 } | null>(null)
 const isUpdating = ref(false)
@@ -294,10 +288,10 @@ async function saveEdit() {
     const updated = await updateResult(editData.value.runId, editData.value.resultId, editData.value.value)
     for (const lt of orderLabTests.value) {
       const runs = runsByLabTestId.value[lt.id] ?? []
-      const runIdx = runs.findIndex((r) => r.id === updated.testRunId)
+      const runIdx = runs.findIndex(r => r.id === updated.testRunId)
       if (runIdx !== -1) {
         const run = runs[runIdx]!
-        const resultIdx = run.results.findIndex((r) => r.id === updated.id)
+        const resultIdx = run.results.findIndex(r => r.id === updated.id)
         if (resultIdx !== -1) run.results[resultIdx] = updated
         break
       }

@@ -7,7 +7,7 @@ export interface TestRunResult {
 
 export interface TestRun {
   id: number
-  testId: number   // LabTest.id (order line item), NOT the catalog Test.id
+  testId: number // LabTest.id (order line item), NOT the catalog Test.id
   runNumber: number | null
   performedAt: string | null
   isVerified: boolean | null

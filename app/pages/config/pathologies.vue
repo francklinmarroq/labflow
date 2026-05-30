@@ -146,7 +146,10 @@ async function confirmDelete() {
       :description="isEditing ? 'Update the pathology name.' : 'Add a new pathology to the catalog.'"
     >
       <template #body>
-        <UFormField label="Name" required>
+        <UFormField
+          label="Name"
+          required
+        >
           <UInput
             v-model="form.name"
             placeholder="e.g. Diabetes mellitus"

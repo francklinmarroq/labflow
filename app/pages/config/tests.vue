@@ -179,7 +179,10 @@ async function confirmDelete() {
     >
       <template #body>
         <div class="flex flex-col gap-4">
-          <UFormField label="Name" required>
+          <UFormField
+            label="Name"
+            required
+          >
             <UInput
               v-model="form.name"
               placeholder="e.g. Glucose"

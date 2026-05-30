@@ -24,7 +24,7 @@ const patients = computed(() => data.value?.content ?? [])
 const allPathologies = computed(() => pathologyData.value?.content ?? [])
 
 const pathologyMap = computed(() =>
-  Object.fromEntries(allPathologies.value.map((p) => [p.id, p.name]))
+  Object.fromEntries(allPathologies.value.map(p => [p.id, p.name]))
 )
 
 // --- Age helper ---
@@ -50,7 +50,7 @@ const searchQuery = ref('')
 const filteredPatients = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
   if (!q) return patients.value
-  return patients.value.filter((p) =>
+  return patients.value.filter(p =>
     p.name.toLowerCase().includes(q)
     || p.nationalIdNumber?.toLowerCase().includes(q)
     || p.phone?.includes(q)
