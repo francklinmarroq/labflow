@@ -14,8 +14,8 @@ export interface ExamReportData {
   testName: string
   testConfigName: string | null
   run: TestRun
-  paramMap: Record<number, Parameter>
-  unitMap: Record<number, string>
+  paramMap: Record<string, Parameter>
+  unitMap: Record<string, string>
   referenceRanges: Record<number, ReferenceRange[]>
   format?: PrintFormat
 }
@@ -73,7 +73,7 @@ function refText(ranges: ReferenceRange[], unit: string): string {
 function buildHtml(data: ExamReportData): string {
   const { lab, patient, order, testName, testConfigName, run, paramMap, unitMap, referenceRanges, format = 'A4' } = data
   const isA5 = format === 'A5'
-  const fs = (a4: string, a5: string) => (isA5 ? a5 : a4)
+  const sz = (a4: string, a5: string) => (isA5 ? a5 : a4)
 
   const rows = run.results.map((result) => {
     const param = paramMap[result.parameterId]
@@ -104,7 +104,7 @@ function buildHtml(data: ExamReportData): string {
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: Arial, sans-serif;
-      font-size: ${fs('13px', '11px')};
+      font-size: ${sz('13px', '11px')};
       color: #1f2937;
       background: #fff;
     }
@@ -117,17 +117,17 @@ function buildHtml(data: ExamReportData): string {
       margin-bottom: 14px;
     }
     .lab-name {
-      font-size: ${fs('22px', '18px')};
+      font-size: ${sz('22px', '18px')};
       font-weight: 800;
       color: #0ea5e9;
     }
-    .lab-meta { color: #6b7280; font-size: ${fs('11px', '10px')}; margin-top: 4px; }
+    .lab-meta { color: #6b7280; font-size: ${sz('11px', '10px')}; margin-top: 4px; }
     .lab-meta span { display: block; }
-    .rpt-label { text-align: right; font-size: ${fs('11px', '10px')}; color: #6b7280; }
-    .rpt-label .title { font-size: ${fs('15px', '13px')}; font-weight: 700; color: #1f2937; display: block; margin-bottom: 2px; }
+    .rpt-label { text-align: right; font-size: ${sz('11px', '10px')}; color: #6b7280; }
+    .rpt-label .title { font-size: ${sz('15px', '13px')}; font-weight: 700; color: #1f2937; display: block; margin-bottom: 2px; }
     .section { margin-bottom: 12px; }
     .section-title {
-      font-size: ${fs('10px', '9px')};
+      font-size: ${sz('10px', '9px')};
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.06em;
@@ -143,8 +143,8 @@ function buildHtml(data: ExamReportData): string {
       border-radius: 6px;
       padding: 10px 14px;
     }
-    .info-item .lbl { font-size: ${fs('10px', '9px')}; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; }
-    .info-item .val { font-size: ${fs('13px', '11px')}; font-weight: 600; color: #1f2937; margin-top: 1px; }
+    .info-item .lbl { font-size: ${sz('10px', '9px')}; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; }
+    .info-item .val { font-size: ${sz('13px', '11px')}; font-weight: 600; color: #1f2937; margin-top: 1px; }
     .exam-box {
       background: #eff6ff;
       border: 1px solid #bfdbfe;
@@ -152,23 +152,23 @@ function buildHtml(data: ExamReportData): string {
       padding: 10px 14px;
       margin-bottom: 14px;
     }
-    .exam-name { font-size: ${fs('16px', '14px')}; font-weight: 800; color: #1e40af; }
-    .exam-sub { font-size: ${fs('11px', '10px')}; color: #6b7280; margin-top: 3px; }
+    .exam-name { font-size: ${sz('16px', '14px')}; font-weight: 800; color: #1e40af; }
+    .exam-sub { font-size: ${sz('11px', '10px')}; color: #6b7280; margin-top: 3px; }
     table { width: 100%; border-collapse: collapse; }
     thead tr { background: #f3f4f6; }
     th {
       padding: 8px 12px;
       text-align: left;
-      font-size: ${fs('10px', '9px')};
+      font-size: ${sz('10px', '9px')};
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.06em;
       color: #6b7280;
     }
-    td { font-size: ${fs('13px', '11px')}; }
+    td { font-size: ${sz('13px', '11px')}; }
     .legend {
       margin-top: 8px;
-      font-size: ${fs('10px', '9px')};
+      font-size: ${sz('10px', '9px')};
       color: #9ca3af;
       display: flex;
       gap: 14px;
@@ -179,7 +179,7 @@ function buildHtml(data: ExamReportData): string {
       border-top: 1px solid #e5e7eb;
       display: flex;
       justify-content: space-between;
-      font-size: ${fs('10px', '9px')};
+      font-size: ${sz('10px', '9px')};
       color: #9ca3af;
     }
     @media print { body { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
