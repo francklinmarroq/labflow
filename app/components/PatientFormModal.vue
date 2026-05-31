@@ -13,12 +13,10 @@ const emit = defineEmits<{
   'saved': [patient: Patient]
 }>()
 
-const { public: { apiBase } } = useRuntimeConfig()
 const { createPatient, updatePatient } = usePatientsApi()
 const toast = useToast()
 
-const { data: pathologyData } = useFetch<PathologyResponse>('/pathologies', {
-  baseURL: apiBase,
+const { data: pathologyData } = await useAuthFetch<PathologyResponse>('/pathologies', {
   params: { pageSize: 100, sortBy: 'name', sortOrder: 'ASC' }
 })
 const allPathologies = computed(() => pathologyData.value?.content ?? [])
