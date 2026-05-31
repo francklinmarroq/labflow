@@ -15,6 +15,9 @@ export interface UnitResponse {
 export function useUnitsApi() {
   const api = useApiClient()
 
+  const getAllUnits = (params?: { pageSize?: number; sortBy?: string; sortOrder?: string }) =>
+    api<UnitResponse>('/units', { params })
+
   const createUnit = (body: { unitSymbol: string }) =>
     api<Unit>('/units', { method: 'POST', body })
 
@@ -24,5 +27,5 @@ export function useUnitsApi() {
   const deleteUnit = (id: number) =>
     api<Unit>(`/units/${id}`, { method: 'DELETE' })
 
-  return { createUnit, updateUnit, deleteUnit }
+  return { getAllUnits, createUnit, updateUnit, deleteUnit }
 }

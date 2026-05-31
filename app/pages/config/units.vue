@@ -4,15 +4,26 @@ import type { Unit, UnitResponse } from '~/composables/useUnitsApi'
 
 useSeoMeta({ title: 'Units — LabFlow' })
 
-const { public: { apiBase } } = useRuntimeConfig()
-const { createUnit, updateUnit, deleteUnit } = useUnitsApi()
+const { getAllUnits, createUnit, updateUnit, deleteUnit } = useUnitsApi()
 const toast = useToast()
 
 // --- List ---
-const { data, status, refresh } = await useFetch<UnitResponse>('/units', {
-  baseURL: apiBase,
-  params: { pageSize: 100, sortBy: 'unitSymbol', sortOrder: 'ASC' }
-})
+const data = ref<UnitResponse | null>(null)
+const status = ref<'pending' | 'success' | 'error'>('pending')
+
+async function fetchUnits() {
+  status.value = 'pending'
+  try {
+    data.value = await getAllUnits({ pageSize: 100, sortBy: 'unitSymbol', sortOrder: 'ASC' })
+    status.value = 'success'
+  } catch {
+    status.value = 'error'
+  }
+}
+
+await fetchUnits()
+
+function refresh() { fetchUnits() }
 
 const units = computed(() => data.value?.content ?? [])
 
