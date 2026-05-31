@@ -6,11 +6,16 @@ import type { TestConfigResponse } from '~/composables/useTestConfigsApi'
 import type { ParameterResponse } from '~/composables/useParametersApi'
 import type { UnitResponse } from '~/composables/useUnitsApi'
 import type { TestRun } from '~/composables/useTestRunsApi'
+import type { Laboratory } from '~/composables/useLaboratoryApi'
+import type { ReferenceRange } from '~/composables/useReferenceRangesApi'
+import type { PrintFormat } from '~/composables/useLabReport'
 
 useSeoMeta({ title: 'Results — LabFlow' })
 
 const { public: { apiBase } } = useRuntimeConfig()
 const { getRunsByLabTest } = useTestRunsApi()
+const { getLaboratory } = useLaboratoryApi()
+const { fetchReferenceRanges, printExamReport } = useLabReport()
 const toast = useToast()
 
 const { data: orderData } = await useFetch<LabOrderResponse>('/orders', {
@@ -46,7 +51,7 @@ const allParameters = computed(() => parameterData.value?.content ?? [])
 const allUnits = computed(() => unitData.value?.content ?? [])
 
 const patientMap = computed(() =>
-  Object.fromEntries(allPatients.value.map(p => [p.id, p.name]))
+  Object.fromEntries(allPatients.value.map(p => [p.id, p]))
 )
 const catalogTestMap = computed(() =>
   Object.fromEntries(allCatalogTests.value.map(t => [t.id, t.name]))
@@ -92,7 +97,7 @@ function formatDateTime(raw: string | null): string {
 
 const orderOptions = computed(() =>
   orders.value.map(o => ({
-    label: `${patientMap.value[o.customerId] ?? '—'} — ${formatDate(o.requestedAt)}`,
+    label: `${patientMap.value[o.customerId]?.name ?? '—'} — ${formatDate(o.requestedAt)}`,
     value: o.id
   }))
 )
@@ -103,11 +108,28 @@ const selectedOrder = computed((): LabOrder | null =>
   orders.value.find(o => o.id === selectedOrderId.value) ?? null
 )
 
+const selectedPatient = computed(() =>
+  selectedOrder.value ? (patientMap.value[selectedOrder.value.customerId] ?? null) : null
+)
+
 const orderLabTests = ref<OrderLabTest[]>([])
 const runsByLabTestId = ref<Record<number, TestRun[]>>({})
 const loadingTests = ref(false)
+const orderReferenceRanges = ref<Record<number, ReferenceRange[]>>({})
 
-// Returns the verified run if one exists, otherwise the most recent run
+const labInfo = ref<Laboratory | null>(null)
+const printFormat = ref<PrintFormat>('A4')
+const printingId = ref<number | null>(null)
+const printingAll = ref(false)
+
+onMounted(async () => {
+  try {
+    labInfo.value = await getLaboratory()
+  } catch {
+    // lab info not configured yet, print will still work without it
+  }
+})
+
 function getActiveRun(runs: TestRun[]): TestRun | null {
   if (!runs.length) return null
   return runs.find(r => r.isVerified) ?? runs.at(-1) ?? null
@@ -117,6 +139,7 @@ async function loadOrderData(orderId: number) {
   loadingTests.value = true
   orderLabTests.value = []
   runsByLabTestId.value = {}
+  orderReferenceRanges.value = {}
   try {
     const tests = await $fetch<OrderLabTest[]>(`/orders/${orderId}/tests`, { baseURL: apiBase })
     orderLabTests.value = tests
@@ -129,6 +152,15 @@ async function loadOrderData(orderId: number) {
         }
       })
     )
+    // Collect unique parameter IDs from all active runs
+    const paramIds = new Set<number>()
+    for (const lt of tests) {
+      const run = getActiveRun(runsByLabTestId.value[lt.id] ?? [])
+      run?.results.forEach(r => paramIds.add(r.parameterId))
+    }
+    if (paramIds.size > 0) {
+      orderReferenceRanges.value = await fetchReferenceRanges([...paramIds])
+    }
   } catch (error: unknown) {
     const e = error as { data?: { message?: string }, message?: string }
     toast.add({ title: e?.data?.message ?? 'Failed to load results', color: 'error' })
@@ -141,6 +173,7 @@ watch(selectedOrderId, async (id) => {
   if (!id) {
     orderLabTests.value = []
     runsByLabTestId.value = {}
+    orderReferenceRanges.value = {}
     return
   }
   await loadOrderData(id)
@@ -156,6 +189,66 @@ const testsWithResults = computed(() =>
 const completedCount = computed(() =>
   testsWithResults.value.filter(t => t.activeRun?.isVerified).length
 )
+
+function buildReportBase() {
+  if (!labInfo.value || !selectedOrder.value || !selectedPatient.value) return null
+  return {
+    lab: labInfo.value,
+    patient: selectedPatient.value,
+    order: selectedOrder.value,
+    paramMap: paramMap.value,
+    unitMap: unitMap.value,
+    referenceRanges: orderReferenceRanges.value,
+    format: printFormat.value
+  }
+}
+
+async function handlePrintExam(labTestId: number) {
+  const base = buildReportBase()
+  if (!base) {
+    toast.add({ title: 'Información del laboratorio no disponible', color: 'warning' })
+    return
+  }
+  const lt = orderLabTests.value.find(t => t.id === labTestId)
+  if (!lt) return
+  const run = getActiveRun(runsByLabTestId.value[lt.id] ?? [])
+  if (!run) return
+  printingId.value = labTestId
+  try {
+    printExamReport({
+      ...base,
+      testName: catalogTestMap.value[lt.testId] ?? `Examen #${lt.testId}`,
+      testConfigName: lt.testConfigId ? (testConfigMap.value[lt.testConfigId]?.name ?? null) : null,
+      run
+    })
+  } finally {
+    printingId.value = null
+  }
+}
+
+async function handlePrintAll() {
+  const base = buildReportBase()
+  if (!base) {
+    toast.add({ title: 'Información del laboratorio no disponible', color: 'warning' })
+    return
+  }
+  printingAll.value = true
+  try {
+    for (const { labTest: lt, activeRun: run } of testsWithResults.value) {
+      if (!run || !run.results.length) continue
+      printExamReport({
+        ...base,
+        testName: catalogTestMap.value[lt.testId] ?? `Examen #${lt.testId}`,
+        testConfigName: lt.testConfigId ? (testConfigMap.value[lt.testConfigId]?.name ?? null) : null,
+        run
+      })
+      // Small delay so the browser can open each window
+      await new Promise(r => setTimeout(r, 300))
+    }
+  } finally {
+    printingAll.value = false
+  }
+}
 </script>
 
 <template>
@@ -219,7 +312,7 @@ const completedCount = computed(() =>
               Patient
             </p>
             <p class="font-bold text-highlighted">
-              {{ patientMap[selectedOrder.customerId] ?? `#${selectedOrder.customerId}` }}
+              {{ selectedPatient?.name ?? `#${selectedOrder.customerId}` }}
             </p>
           </div>
           <div>
@@ -250,6 +343,29 @@ const completedCount = computed(() =>
             <p class="text-sm text-default tabular-nums">
               {{ completedCount }}/{{ orderLabTests.length }} verified
             </p>
+          </div>
+
+          <!-- Print controls -->
+          <div class="ml-auto flex items-center gap-2">
+            <USelect
+              v-model="printFormat"
+              :items="[{ label: 'A4', value: 'A4' }, { label: 'A5', value: 'A5' }]"
+              value-key="value"
+              label-key="label"
+              size="sm"
+              class="w-20"
+            />
+            <UButton
+              icon="i-lucide-printer"
+              color="primary"
+              variant="soft"
+              size="sm"
+              :loading="printingAll"
+              :disabled="!labInfo"
+              @click="handlePrintAll"
+            >
+              Print All
+            </UButton>
           </div>
         </div>
 
@@ -285,6 +401,21 @@ const completedCount = computed(() =>
                 >
                   {{ activeRun.isVerified ? 'Verified' : 'Pending Verification' }}
                 </UBadge>
+
+                <!-- Per-exam print button -->
+                <UButton
+                  v-if="activeRun && activeRun.results.length"
+                  icon="i-lucide-printer"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  :loading="printingId === labTest.id"
+                  :disabled="!labInfo"
+                  class="ml-auto"
+                  @click="handlePrintExam(labTest.id)"
+                >
+                  Print
+                </UButton>
               </div>
             </template>
 
