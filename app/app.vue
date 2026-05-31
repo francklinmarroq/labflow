@@ -1,18 +1,13 @@
-<script setup>
-const { isAuthenticated, logout } = useAuth()
+<script setup lang="ts">
+const { isAuthenticated, user, logout } = useAuth()
 const route = useRoute()
-const isLoginPage = computed(() => route.path === '/login')
+
+const showDashboard = computed(() => isAuthenticated.value && route.path !== '/login')
 
 useHead({
-  meta: [
-    { name: 'viewport', content: 'width=device-width, initial-scale=1' }
-  ],
-  link: [
-    { rel: 'icon', href: '/favicon.ico' }
-  ],
-  htmlAttrs: {
-    lang: 'en'
-  }
+  meta: [{ name: 'viewport', content: 'width=device-width, initial-scale=1' }],
+  link: [{ rel: 'icon', href: '/favicon.ico' }],
+  htmlAttrs: { lang: 'en' }
 })
 
 useSeoMeta({
@@ -23,42 +18,52 @@ useSeoMeta({
 
 <template>
   <UApp>
-    <template v-if="!isLoginPage && isAuthenticated">
-      <UDashboardGroup>
-        <UDashboardSidebar>
-          <template #header>
-            <AppLogo />
-          </template>
+    <UDashboardGroup v-if="showDashboard">
+      <UDashboardSidebar>
+        <template #header>
+          <AppLogo />
+        </template>
 
-          <AppNavigation />
+        <AppNavigation />
 
-          <template #footer>
-            <div class="flex items-center justify-between px-2">
-              <UColorModeButton />
-              <UButton variant="ghost" icon="i-lucide-log-out" @click="logout" />
+        <template #footer>
+          <div class="flex items-center gap-2 px-3 py-2">
+            <div class="flex items-center gap-2 flex-1 min-w-0">
+              <UAvatar :label="user?.username?.charAt(0).toUpperCase()" size="sm" />
+              <span class="text-sm font-medium truncate text-gray-700 dark:text-gray-200">
+                {{ user?.username }}
+              </span>
             </div>
+            <UColorModeButton size="xs" variant="ghost" />
+            <UTooltip text="Sign out">
+              <UButton
+                icon="i-lucide-log-out"
+                size="xs"
+                variant="ghost"
+                color="neutral"
+                @click="logout"
+              />
+            </UTooltip>
+          </div>
+        </template>
+      </UDashboardSidebar>
+
+      <UDashboardPanel>
+        <UDashboardNavbar>
+          <template #left>
+            <UDashboardSidebarToggle />
           </template>
-        </UDashboardSidebar>
+          <template #right>
+            <UDashboardSearchButton />
+          </template>
+        </UDashboardNavbar>
 
-        <UDashboardPanel>
-          <UDashboardNavbar>
-            <template #left>
-              <UDashboardSidebarToggle />
-            </template>
-            <template #right>
-              <UDashboardSearchButton />
-            </template>
-          </UDashboardNavbar>
+        <UMain>
+          <NuxtPage />
+        </UMain>
+      </UDashboardPanel>
+    </UDashboardGroup>
 
-          <UMain>
-            <NuxtPage />
-          </UMain>
-        </UDashboardPanel>
-      </UDashboardGroup>
-    </template>
-
-    <template v-else>
-      <NuxtPage />
-    </template>
+    <NuxtPage v-else />
   </UApp>
 </template>
