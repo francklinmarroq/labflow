@@ -7,7 +7,7 @@ export interface TestRunResult {
 
 export interface TestRun {
   id: number
-  testId: number // LabTest.id (order line item), NOT the catalog Test.id
+  testId: number
   runNumber: number | null
   performedAt: string | null
   isVerified: boolean | null
@@ -15,22 +15,22 @@ export interface TestRun {
 }
 
 export function useTestRunsApi() {
-  const { public: { apiBase } } = useRuntimeConfig()
+  const api = useApiClient()
 
   const getRunsByLabTest = (labTestId: number) =>
-    $fetch<TestRun[]>(`/tests/${labTestId}/runs`, { baseURL: apiBase })
+    api<TestRun[]>(`/tests/${labTestId}/runs`)
 
   const addRun = (labTestId: number, body: { results: { parameterId: number, value: string }[] }) =>
-    $fetch<TestRun>(`/tests/${labTestId}/runs`, { baseURL: apiBase, method: 'POST', body })
+    api<TestRun>(`/tests/${labTestId}/runs`, { method: 'POST', body })
 
   const verifyRun = (labTestId: number, runId: number) =>
-    $fetch<TestRun>(`/tests/${labTestId}/runs/${runId}/verify`, { baseURL: apiBase, method: 'PUT' })
+    api<TestRun>(`/tests/${labTestId}/runs/${runId}/verify`, { method: 'PUT' })
 
   const deleteRun = (labTestId: number, runId: number) =>
-    $fetch<TestRun>(`/tests/${labTestId}/runs/${runId}`, { baseURL: apiBase, method: 'DELETE' })
+    api<TestRun>(`/tests/${labTestId}/runs/${runId}`, { method: 'DELETE' })
 
   const updateResult = (runId: number, resultId: number, value: string) =>
-    $fetch<TestRunResult>(`/runs/${runId}/results/${resultId}`, { baseURL: apiBase, method: 'PUT', body: { value } })
+    api<TestRunResult>(`/runs/${runId}/results/${resultId}`, { method: 'PUT', body: { value } })
 
   return { getRunsByLabTest, addRun, verifyRun, deleteRun, updateResult }
 }
