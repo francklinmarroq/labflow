@@ -5,18 +5,15 @@ import type { PathologyResponse } from '~/composables/usePathologiesApi'
 
 useSeoMeta({ title: 'Patients — LabFlow' })
 
-const { public: { apiBase } } = useRuntimeConfig()
 const { deletePatient } = usePatientsApi()
 const toast = useToast()
 
 // --- Data ---
-const { data, status, refresh } = await useFetch<PatientResponse>('/customers', {
-  baseURL: apiBase,
+const { data, status, refresh } = await useAuthFetch<PatientResponse>('/customers', {
   params: { pageSize: 100, sortBy: 'name', sortOrder: 'ASC' }
 })
 
-const { data: pathologyData } = await useFetch<PathologyResponse>('/pathologies', {
-  baseURL: apiBase,
+const { data: pathologyData } = await useAuthFetch<PathologyResponse>('/pathologies', {
   params: { pageSize: 100, sortBy: 'name', sortOrder: 'ASC' }
 })
 

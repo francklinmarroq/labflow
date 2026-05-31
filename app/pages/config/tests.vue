@@ -4,13 +4,11 @@ import type { LabTest, LabTestResponse } from '~/composables/useTestsApi'
 
 useSeoMeta({ title: 'Tests — LabFlow' })
 
-const { public: { apiBase } } = useRuntimeConfig()
 const { createTest, updateTest, deleteTest } = useTestsApi()
 const toast = useToast()
 
 // --- List ---
-const { data, status, refresh } = await useFetch<LabTestResponse>('/tests', {
-  baseURL: apiBase,
+const { data, status, refresh } = await useAuthFetch<LabTestResponse>('/tests', {
   params: { pageSize: 100, sortBy: 'name', sortOrder: 'ASC' }
 })
 

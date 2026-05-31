@@ -3,13 +3,10 @@ import type { Laboratory } from '~/composables/useLaboratoryApi'
 
 useSeoMeta({ title: 'Laboratorio — LabFlow' })
 
-const { public: { apiBase } } = useRuntimeConfig()
 const { createLaboratory, updateLaboratory } = useLaboratoryApi()
 const toast = useToast()
 
-const { data: lab, status, refresh } = await useFetch<Laboratory>('/laboratory', {
-  baseURL: apiBase
-})
+const { data: lab, status, refresh } = await useAuthFetch<Laboratory>('/laboratory')
 
 const isEditing = computed(() => !!lab.value?.id)
 const isSubmitting = ref(false)

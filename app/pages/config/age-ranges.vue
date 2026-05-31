@@ -4,13 +4,11 @@ import type { AgeRange, AgeRangeResponse } from '~/composables/useAgeRangesApi'
 
 useSeoMeta({ title: 'Age Ranges — LabFlow' })
 
-const { public: { apiBase } } = useRuntimeConfig()
 const { createAgeRange, updateAgeRange, deleteAgeRange } = useAgeRangesApi()
 const toast = useToast()
 
 // --- List ---
-const { data, status, refresh } = await useFetch<AgeRangeResponse>('/age-ranges', {
-  baseURL: apiBase,
+const { data, status, refresh } = await useAuthFetch<AgeRangeResponse>('/age-ranges', {
   params: { pageSize: 100, sortBy: 'name', sortOrder: 'ASC' }
 })
 

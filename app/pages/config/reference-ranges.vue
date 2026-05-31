@@ -6,18 +6,16 @@ import type { AgeRangeResponse } from '~/composables/useAgeRangesApi'
 
 useSeoMeta({ title: 'Reference Ranges — LabFlow' })
 
-const { public: { apiBase } } = useRuntimeConfig()
+const api = useApiClient()
 const { createRange, updateRange, deleteRange } = useReferenceRangesApi()
 const toast = useToast()
 
 // --- Data ---
-const { data: paramData } = await useFetch<ParameterResponse>('/parameters', {
-  baseURL: apiBase,
+const { data: paramData } = await useAuthFetch<ParameterResponse>('/parameters', {
   params: { pageSize: 100, sortBy: 'name', sortOrder: 'ASC' }
 })
 
-const { data: ageRangeData } = await useFetch<AgeRangeResponse>('/age-ranges', {
-  baseURL: apiBase,
+const { data: ageRangeData } = await useAuthFetch<AgeRangeResponse>('/age-ranges', {
   params: { pageSize: 100, sortBy: 'name', sortOrder: 'ASC' }
 })
 
@@ -66,9 +64,9 @@ async function loadRanges() {
   }
   isLoadingRanges.value = true
   try {
-    const res = await $fetch<ReferenceRangeResponse>(
+    const res = await api<ReferenceRangeResponse>(
       `/parameters/${selectedParameterId.value}/reference-ranges`,
-      { baseURL: apiBase, params: { pageSize: 100 } }
+      { params: { pageSize: 100 } }
     )
     ranges.value = res.content
   } catch (error: unknown) {

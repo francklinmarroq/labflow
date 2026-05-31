@@ -9,34 +9,28 @@ import type { TestRun, TestRunResult } from '~/composables/useTestRunsApi'
 
 useSeoMeta({ title: 'Lab Workspace — LabFlow' })
 
-const { public: { apiBase } } = useRuntimeConfig()
+const api = useApiClient()
 const { getRunsByLabTest, addRun, verifyRun, deleteRun, updateResult } = useTestRunsApi()
 const { assignTestConfig } = useLabOrdersApi()
 const toast = useToast()
 
 // Catalog data
-const { data: orderData } = await useFetch<LabOrderResponse>('/orders', {
-  baseURL: apiBase,
+const { data: orderData } = await useAuthFetch<LabOrderResponse>('/orders', {
   params: { pageSize: 100, sortBy: 'requestedAt', sortOrder: 'DESC' }
 })
-const { data: patientData } = await useFetch<PatientResponse>('/customers', {
-  baseURL: apiBase,
+const { data: patientData } = await useAuthFetch<PatientResponse>('/customers', {
   params: { pageSize: 100, sortBy: 'name', sortOrder: 'ASC' }
 })
-const { data: catalogTestData } = await useFetch<LabTestResponse>('/tests', {
-  baseURL: apiBase,
+const { data: catalogTestData } = await useAuthFetch<LabTestResponse>('/tests', {
   params: { pageSize: 100, sortBy: 'name', sortOrder: 'ASC' }
 })
-const { data: testConfigData } = await useFetch<TestConfigResponse>('/test-configs', {
-  baseURL: apiBase,
+const { data: testConfigData } = await useAuthFetch<TestConfigResponse>('/test-configs', {
   params: { pageSize: 100, sortBy: 'name', sortOrder: 'ASC' }
 })
-const { data: parameterData } = await useFetch<ParameterResponse>('/parameters', {
-  baseURL: apiBase,
+const { data: parameterData } = await useAuthFetch<ParameterResponse>('/parameters', {
   params: { pageSize: 100, sortBy: 'name', sortOrder: 'ASC' }
 })
-const { data: unitData } = await useFetch<UnitResponse>('/units', {
-  baseURL: apiBase,
+const { data: unitData } = await useAuthFetch<UnitResponse>('/units', {
   params: { pageSize: 100, sortBy: 'unitSymbol', sortOrder: 'ASC' }
 })
 
@@ -130,7 +124,7 @@ async function loadOrderData(orderId: number) {
   runsByLabTestId.value = {}
   expandedRuns.value = {}
   try {
-    const tests = await $fetch<OrderLabTest[]>(`/orders/${orderId}/tests`, { baseURL: apiBase })
+    const tests = await api<OrderLabTest[]>(`/orders/${orderId}/tests`)
     orderLabTests.value = tests
     await Promise.all(
       tests.map(async (lt) => {

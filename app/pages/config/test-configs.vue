@@ -6,23 +6,19 @@ import type { LabTestResponse } from '~/composables/useTestsApi'
 
 useSeoMeta({ title: 'Test Templates — LabFlow' })
 
-const { public: { apiBase } } = useRuntimeConfig()
 const { createTestConfig, updateTestConfig, deleteTestConfig } = useTestConfigsApi()
 const toast = useToast()
 
 // --- Data ---
-const { data, status, refresh } = await useFetch<TestConfigResponse>('/test-configs', {
-  baseURL: apiBase,
+const { data, status, refresh } = await useAuthFetch<TestConfigResponse>('/test-configs', {
   params: { pageSize: 100, sortBy: 'name', sortOrder: 'ASC' }
 })
 
-const { data: paramData } = await useFetch<ParameterResponse>('/parameters', {
-  baseURL: apiBase,
+const { data: paramData } = await useAuthFetch<ParameterResponse>('/parameters', {
   params: { pageSize: 100, sortBy: 'name', sortOrder: 'ASC' }
 })
 
-const { data: testData } = await useFetch<LabTestResponse>('/tests', {
-  baseURL: apiBase,
+const { data: testData } = await useAuthFetch<LabTestResponse>('/tests', {
   params: { pageSize: 100, sortBy: 'name', sortOrder: 'ASC' }
 })
 

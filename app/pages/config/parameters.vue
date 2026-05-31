@@ -5,13 +5,12 @@ import type { Unit, UnitResponse } from '~/composables/useUnitsApi'
 
 useSeoMeta({ title: 'Parameters — LabFlow' })
 
-const { public: { apiBase } } = useRuntimeConfig()
+const api = useApiClient()
 const { createParameter, updateParameter, deleteParameter } = useParametersApi()
 const toast = useToast()
 
 // --- List ---
-const { data, status, refresh } = await useFetch<ParameterResponse>('/parameters', {
-  baseURL: apiBase,
+const { data, status, refresh } = await useAuthFetch<ParameterResponse>('/parameters', {
   params: { pageSize: 100, sortBy: 'name', sortOrder: 'ASC' }
 })
 
@@ -20,8 +19,7 @@ const units = ref<Unit[]>([])
 async function loadUnits() {
   if (units.value.length) return
   try {
-    const res = await $fetch<UnitResponse>('/units', {
-      baseURL: apiBase,
+    const res = await api<UnitResponse>('/units', {
       params: { pageSize: 100, sortBy: 'unitSymbol', sortOrder: 'ASC' }
     })
     units.value = res.content
