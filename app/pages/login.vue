@@ -18,10 +18,10 @@ async function submit() {
     }
     await navigateTo('/')
   } catch (e: unknown) {
-    const err = e as { data?: { message?: string }, status?: number }
-    if (err.status === 409) {
+    const err = e as { data?: { message?: string }, statusCode?: number }
+    if (err.statusCode === 409) {
       error.value = 'Username already exists.'
-    } else if (err.status === 401 || err.status === 403) {
+    } else if (err.statusCode === 401 || err.statusCode === 403) {
       error.value = 'Invalid username or password.'
     } else {
       error.value = err.data?.message ?? 'Something went wrong.'
