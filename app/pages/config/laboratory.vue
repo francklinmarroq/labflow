@@ -66,304 +66,406 @@ async function save() {
     }
     if (isEditing.value && lab.value) {
       await updateLaboratory(lab.value.id, body)
-      toast.add({ title: 'Configuración guardada', color: 'success' })
+      toast.add({ title: 'Configuración guardada', icon: 'i-lucide-check-circle', color: 'success' })
     } else {
       await createLaboratory(body)
-      toast.add({ title: 'Laboratorio creado', color: 'success' })
+      toast.add({ title: 'Laboratorio creado', icon: 'i-lucide-check-circle', color: 'success' })
     }
     refresh()
   } catch (error: unknown) {
     const e = error as { data?: { message?: string }, message?: string }
-    toast.add({ title: e?.data?.message ?? e?.message ?? 'Error al guardar', color: 'error' })
+    toast.add({ title: e?.data?.message ?? e?.message ?? 'Error al guardar', icon: 'i-lucide-x-circle', color: 'error' })
   } finally {
     isSubmitting.value = false
   }
 }
 
-const cai1Warning = computed(() => {
+function caiDaysLeft(expirationDate: string) {
+  if (!expirationDate) return null
+  return Math.ceil((new Date(expirationDate).getTime() - Date.now()) / 86400000)
+}
+
+const cai1Status = computed(() => {
   if (!form.cai1) return null
-  if (!form.cai1ExpirationDate) return null
-  const daysLeft = Math.ceil((new Date(form.cai1ExpirationDate).getTime() - Date.now()) / 86400000)
-  if (daysLeft <= 0) return 'CAI vencido'
-  if (daysLeft <= 30) return `Vence en ${daysLeft} días`
+  const days = caiDaysLeft(form.cai1ExpirationDate)
+  if (days === null) return { label: 'Activo', color: 'success' as const, icon: 'i-lucide-shield-check' }
+  if (days <= 0) return { label: 'Vencido', color: 'error' as const, icon: 'i-lucide-shield-x' }
+  if (days <= 30) return { label: `Vence en ${days} días`, color: 'warning' as const, icon: 'i-lucide-shield-alert' }
+  return { label: `Válido · ${days} días`, color: 'success' as const, icon: 'i-lucide-shield-check' }
+})
+
+const cai2Status = computed(() => {
+  if (!form.cai2) return null
+  const days = caiDaysLeft(form.cai2ExpirationDate)
+  if (days === null) return { label: 'Disponible', color: 'info' as const, icon: 'i-lucide-shield-check' }
+  if (days <= 0) return { label: 'Vencido', color: 'error' as const, icon: 'i-lucide-shield-x' }
+  if (days <= 30) return { label: `Vence en ${days} días`, color: 'warning' as const, icon: 'i-lucide-shield-alert' }
+  return { label: `Disponible · ${days} días`, color: 'info' as const, icon: 'i-lucide-shield-check' }
+})
+
+const cai1Warning = computed(() => {
+  if (!form.cai1 || !form.cai1ExpirationDate) return null
+  const days = caiDaysLeft(form.cai1ExpirationDate)!
+  if (days <= 0) return 'El CAI 1 está vencido. Renuévelo ante el SAR o active el CAI 2.'
+  if (days <= 30) return `El CAI 1 vence en ${days} días. Considere tramitar un nuevo CAI.`
   return null
 })
 
 const cai2Warning = computed(() => {
-  if (!form.cai2) return null
-  if (!form.cai2ExpirationDate) return null
-  const daysLeft = Math.ceil((new Date(form.cai2ExpirationDate).getTime() - Date.now()) / 86400000)
-  if (daysLeft <= 0) return 'CAI vencido'
-  if (daysLeft <= 30) return `Vence en ${daysLeft} días`
+  if (!form.cai2 || !form.cai2ExpirationDate) return null
+  const days = caiDaysLeft(form.cai2ExpirationDate)!
+  if (days <= 0) return 'El CAI 2 está vencido. Actualícelo ante el SAR.'
+  if (days <= 30) return `El CAI 2 vence en ${days} días.`
   return null
 })
+
+const tabs = [
+  { label: 'General', icon: 'i-lucide-building-2', slot: 'general' as const },
+  { label: 'Datos Fiscales', icon: 'i-lucide-receipt', slot: 'fiscal' as const },
+  { label: 'CAI Principal', icon: 'i-lucide-file-check', slot: 'cai1' as const },
+  { label: 'CAI Respaldo', icon: 'i-lucide-file-clock', slot: 'cai2' as const }
+]
 </script>
 
 <template>
   <UContainer class="py-8 max-w-3xl">
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-2xl font-bold text-highlighted">
-          Configuración del Laboratorio
-        </h1>
-        <p class="text-sm text-muted mt-1">
-          Datos generales, fiscales y CAI para facturación en Honduras
-        </p>
-      </div>
-    </div>
-
+    <!-- Loading -->
     <div
       v-if="status === 'pending'"
-      class="flex justify-center py-16"
+      class="flex flex-col items-center justify-center py-24 gap-3"
     >
       <UIcon
         name="i-lucide-loader-circle"
-        class="animate-spin text-3xl text-muted"
+        class="animate-spin text-4xl text-muted"
       />
+      <p class="text-sm text-muted">
+        Cargando configuración…
+      </p>
     </div>
 
     <template v-else>
-      <!-- Datos Generales -->
-      <UCard class="mb-6">
-        <template #header>
-          <div class="flex items-center gap-2">
-            <UIcon name="i-lucide-building-2" />
-            <span class="font-semibold">Datos Generales</span>
+      <!-- Page header -->
+      <div class="mb-8">
+        <div class="flex items-start gap-4">
+          <div class="shrink-0 size-14 rounded-2xl bg-primary/10 ring-1 ring-primary/20 flex items-center justify-center">
+            <UIcon
+              name="i-lucide-flask-conical"
+              class="text-2xl text-primary"
+            />
           </div>
-        </template>
 
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <UFormField
-            label="Nombre del Laboratorio"
-            required
-            class="sm:col-span-2"
-          >
-            <UInput
-              v-model="form.name"
-              placeholder="Laboratorio Clínico XYZ"
-            />
-          </UFormField>
-
-          <UFormField label="Teléfono">
-            <UInput
-              v-model="form.phone"
-              placeholder="+504 0000-0000"
-            />
-          </UFormField>
-
-          <UFormField label="Correo Electrónico">
-            <UInput
-              v-model="form.email"
-              type="email"
-              placeholder="info@laboratorio.hn"
-            />
-          </UFormField>
-
-          <UFormField
-            label="Dirección 1"
-            class="sm:col-span-2"
-          >
-            <UInput
-              v-model="form.address1"
-              placeholder="Colonia, calle, número"
-            />
-          </UFormField>
-
-          <UFormField
-            label="Dirección 2"
-            class="sm:col-span-2"
-          >
-            <UInput
-              v-model="form.address2"
-              placeholder="Segunda dirección (opcional)"
-            />
-          </UFormField>
-        </div>
-      </UCard>
-
-      <!-- Datos Fiscales -->
-      <UCard class="mb-6">
-        <template #header>
-          <div class="flex items-center gap-2">
-            <UIcon name="i-lucide-receipt" />
-            <span class="font-semibold">Datos Fiscales</span>
-          </div>
-        </template>
-
-        <UFormField label="RTN (Registro Tributario Nacional)">
-          <UInput
-            v-model="form.rtn"
-            placeholder="0000-0000-000000"
-            class="font-mono"
-          />
-        </UFormField>
-      </UCard>
-
-      <!-- CAI 1 -->
-      <UCard class="mb-6">
-        <template #header>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <UIcon name="i-lucide-file-check" />
-              <span class="font-semibold">CAI 1 — Principal</span>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h1 class="text-2xl font-bold text-highlighted truncate">
+                  {{ form.name || 'Configuración del Laboratorio' }}
+                </h1>
+                <p class="text-sm text-muted mt-0.5">
+                  Datos generales, fiscales y CAI · Honduras
+                </p>
+              </div>
+              <UButton
+                size="md"
+                icon="i-lucide-save"
+                :loading="isSubmitting"
+                :disabled="!form.name.trim()"
+                class="shrink-0"
+                @click="save"
+              >
+                {{ isEditing ? 'Guardar' : 'Crear' }}
+              </UButton>
             </div>
-            <UBadge
-              v-if="cai1Warning"
-              color="warning"
-              variant="subtle"
+
+            <!-- CAI status pills -->
+            <div
+              v-if="cai1Status || cai2Status"
+              class="flex flex-wrap items-center gap-2 mt-3"
             >
-              {{ cai1Warning }}
-            </UBadge>
-            <UBadge
-              v-else-if="form.cai1"
-              color="success"
-              variant="subtle"
-            >
-              Activo
-            </UBadge>
-          </div>
-        </template>
-
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <UFormField
-            label="Código CAI"
-            class="sm:col-span-2"
-          >
-            <UInput
-              v-model="form.cai1"
-              placeholder="XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-XX"
-              class="font-mono"
-            />
-          </UFormField>
-
-          <UFormField label="Fecha de Vencimiento">
-            <UInput
-              v-model="form.cai1ExpirationDate"
-              type="date"
-            />
-          </UFormField>
-
-          <div />
-
-          <UFormField label="Rango Desde">
-            <UInput
-              v-model="form.cai1RangeFrom"
-              placeholder="001-001-01-00000001"
-              class="font-mono"
-            />
-          </UFormField>
-
-          <UFormField label="Rango Hasta">
-            <UInput
-              v-model="form.cai1RangeTo"
-              placeholder="001-001-01-99999999"
-              class="font-mono"
-            />
-          </UFormField>
-
-          <UFormField
-            label="Número de Factura Actual"
-            class="sm:col-span-2"
-          >
-            <UInput
-              v-model="form.cai1CurrentNumber"
-              placeholder="001-001-01-00000001"
-              class="font-mono"
-            />
-          </UFormField>
-        </div>
-      </UCard>
-
-      <!-- CAI 2 -->
-      <UCard class="mb-6">
-        <template #header>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <UIcon name="i-lucide-file-clock" />
-              <span class="font-semibold">CAI 2 — Respaldo</span>
+              <div
+                v-if="cai1Status"
+                class="flex items-center gap-1.5"
+              >
+                <span class="text-xs text-muted font-medium">CAI 1</span>
+                <UBadge
+                  :color="cai1Status.color"
+                  :icon="cai1Status.icon"
+                  variant="subtle"
+                  size="sm"
+                >
+                  {{ cai1Status.label }}
+                </UBadge>
+              </div>
+              <USeparator
+                v-if="cai1Status && cai2Status"
+                orientation="vertical"
+                class="h-4"
+              />
+              <div
+                v-if="cai2Status"
+                class="flex items-center gap-1.5"
+              >
+                <span class="text-xs text-muted font-medium">CAI 2</span>
+                <UBadge
+                  :color="cai2Status.color"
+                  :icon="cai2Status.icon"
+                  variant="subtle"
+                  size="sm"
+                >
+                  {{ cai2Status.label }}
+                </UBadge>
+              </div>
             </div>
-            <UBadge
-              v-if="cai2Warning"
-              color="warning"
-              variant="subtle"
-            >
-              {{ cai2Warning }}
-            </UBadge>
-            <UBadge
-              v-else-if="form.cai2"
-              color="info"
-              variant="subtle"
-            >
-              Disponible
-            </UBadge>
           </div>
-        </template>
-
-        <p class="text-sm text-muted mb-4">
-          Configura el CAI 2 como respaldo para cuando el CAI 1 esté próximo a vencer o se agote el rango de facturación.
-        </p>
-
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <UFormField
-            label="Código CAI"
-            class="sm:col-span-2"
-          >
-            <UInput
-              v-model="form.cai2"
-              placeholder="XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-XX"
-              class="font-mono"
-            />
-          </UFormField>
-
-          <UFormField label="Fecha de Vencimiento">
-            <UInput
-              v-model="form.cai2ExpirationDate"
-              type="date"
-            />
-          </UFormField>
-
-          <div />
-
-          <UFormField label="Rango Desde">
-            <UInput
-              v-model="form.cai2RangeFrom"
-              placeholder="001-001-01-00000001"
-              class="font-mono"
-            />
-          </UFormField>
-
-          <UFormField label="Rango Hasta">
-            <UInput
-              v-model="form.cai2RangeTo"
-              placeholder="001-001-01-99999999"
-              class="font-mono"
-            />
-          </UFormField>
-
-          <UFormField
-            label="Número de Factura Actual"
-            class="sm:col-span-2"
-          >
-            <UInput
-              v-model="form.cai2CurrentNumber"
-              placeholder="001-001-01-00000001"
-              class="font-mono"
-            />
-          </UFormField>
         </div>
-      </UCard>
-
-      <div class="flex justify-end">
-        <UButton
-          size="lg"
-          icon="i-lucide-save"
-          :loading="isSubmitting"
-          :disabled="!form.name.trim()"
-          @click="save"
-        >
-          {{ isEditing ? 'Guardar cambios' : 'Crear configuración' }}
-        </UButton>
       </div>
+
+      <!-- Tabbed sections -->
+      <UTabs
+        :items="tabs"
+        variant="link"
+        class="w-full"
+      >
+        <!-- General -->
+        <template #general>
+          <UCard class="mt-4">
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <UFormField
+                label="Nombre del Laboratorio"
+                required
+                class="sm:col-span-2"
+              >
+                <UInput
+                  v-model="form.name"
+                  placeholder="Laboratorio Clínico XYZ"
+                  leading-icon="i-lucide-building-2"
+                />
+              </UFormField>
+
+              <UFormField label="Teléfono">
+                <UInput
+                  v-model="form.phone"
+                  placeholder="+504 0000-0000"
+                  leading-icon="i-lucide-phone"
+                />
+              </UFormField>
+
+              <UFormField label="Correo Electrónico">
+                <UInput
+                  v-model="form.email"
+                  type="email"
+                  placeholder="info@laboratorio.hn"
+                  leading-icon="i-lucide-mail"
+                />
+              </UFormField>
+
+              <UFormField
+                label="Dirección"
+                class="sm:col-span-2"
+              >
+                <UInput
+                  v-model="form.address1"
+                  placeholder="Colonia, calle, número"
+                  leading-icon="i-lucide-map-pin"
+                />
+              </UFormField>
+
+              <UFormField
+                label="Dirección 2"
+                hint="Opcional"
+                class="sm:col-span-2"
+              >
+                <UInput
+                  v-model="form.address2"
+                  placeholder="Segunda dirección"
+                  leading-icon="i-lucide-map-pin"
+                />
+              </UFormField>
+            </div>
+          </UCard>
+        </template>
+
+        <!-- Fiscal -->
+        <template #fiscal>
+          <UCard class="mt-4">
+            <div class="space-y-5">
+              <UAlert
+                icon="i-lucide-info"
+                color="info"
+                variant="soft"
+                title="Registro Tributario Nacional"
+                description="El RTN debe coincidir exactamente con el registro ante el SAR y se imprimirá en todas las facturas fiscales emitidas."
+              />
+
+              <UFormField
+                label="RTN"
+                description="Formato: 0000-0000-000000"
+              >
+                <UInput
+                  v-model="form.rtn"
+                  placeholder="0000-0000-000000"
+                  leading-icon="i-lucide-hash"
+                  class="font-mono"
+                />
+              </UFormField>
+            </div>
+          </UCard>
+        </template>
+
+        <!-- CAI 1 -->
+        <template #cai1>
+          <UCard class="mt-4">
+            <div class="space-y-5">
+              <UAlert
+                v-if="cai1Warning"
+                icon="i-lucide-triangle-alert"
+                :color="caiDaysLeft(form.cai1ExpirationDate)! <= 0 ? 'error' : 'warning'"
+                variant="soft"
+                title="Atención requerida"
+                :description="cai1Warning"
+              />
+
+              <UAlert
+                v-else-if="!form.cai1"
+                icon="i-lucide-file-plus"
+                color="neutral"
+                variant="soft"
+                title="CAI no configurado"
+                description="Ingrese el código CAI emitido por el SAR para habilitar la facturación fiscal."
+              />
+
+              <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <UFormField
+                  label="Código CAI"
+                  class="sm:col-span-2"
+                >
+                  <UInput
+                    v-model="form.cai1"
+                    placeholder="XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-XX"
+                    leading-icon="i-lucide-key"
+                    class="font-mono"
+                  />
+                </UFormField>
+
+                <UFormField label="Fecha de Vencimiento">
+                  <UInput
+                    v-model="form.cai1ExpirationDate"
+                    type="date"
+                    leading-icon="i-lucide-calendar"
+                  />
+                </UFormField>
+
+                <div />
+
+                <UFormField label="Rango Desde">
+                  <UInput
+                    v-model="form.cai1RangeFrom"
+                    placeholder="001-001-01-00000001"
+                    class="font-mono"
+                  />
+                </UFormField>
+
+                <UFormField label="Rango Hasta">
+                  <UInput
+                    v-model="form.cai1RangeTo"
+                    placeholder="001-001-01-99999999"
+                    class="font-mono"
+                  />
+                </UFormField>
+
+                <UFormField
+                  label="Número de Factura Actual"
+                  description="Correlativo en uso actualmente"
+                  class="sm:col-span-2"
+                >
+                  <UInput
+                    v-model="form.cai1CurrentNumber"
+                    placeholder="001-001-01-00000001"
+                    leading-icon="i-lucide-file-text"
+                    class="font-mono"
+                  />
+                </UFormField>
+              </div>
+            </div>
+          </UCard>
+        </template>
+
+        <!-- CAI 2 -->
+        <template #cai2>
+          <UCard class="mt-4">
+            <div class="space-y-5">
+              <UAlert
+                v-if="cai2Warning"
+                icon="i-lucide-triangle-alert"
+                :color="caiDaysLeft(form.cai2ExpirationDate)! <= 0 ? 'error' : 'warning'"
+                variant="soft"
+                title="Atención requerida"
+                :description="cai2Warning"
+              />
+
+              <UAlert
+                icon="i-lucide-shield"
+                color="neutral"
+                variant="soft"
+                title="CAI de respaldo"
+                description="Se activa automáticamente cuando el CAI principal está próximo a vencer o agota su rango de facturación."
+              />
+
+              <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <UFormField
+                  label="Código CAI"
+                  class="sm:col-span-2"
+                >
+                  <UInput
+                    v-model="form.cai2"
+                    placeholder="XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-XX"
+                    leading-icon="i-lucide-key"
+                    class="font-mono"
+                  />
+                </UFormField>
+
+                <UFormField label="Fecha de Vencimiento">
+                  <UInput
+                    v-model="form.cai2ExpirationDate"
+                    type="date"
+                    leading-icon="i-lucide-calendar"
+                  />
+                </UFormField>
+
+                <div />
+
+                <UFormField label="Rango Desde">
+                  <UInput
+                    v-model="form.cai2RangeFrom"
+                    placeholder="001-001-01-00000001"
+                    class="font-mono"
+                  />
+                </UFormField>
+
+                <UFormField label="Rango Hasta">
+                  <UInput
+                    v-model="form.cai2RangeTo"
+                    placeholder="001-001-01-99999999"
+                    class="font-mono"
+                  />
+                </UFormField>
+
+                <UFormField
+                  label="Número de Factura Actual"
+                  description="Correlativo en uso actualmente"
+                  class="sm:col-span-2"
+                >
+                  <UInput
+                    v-model="form.cai2CurrentNumber"
+                    placeholder="001-001-01-00000001"
+                    leading-icon="i-lucide-file-text"
+                    class="font-mono"
+                  />
+                </UFormField>
+              </div>
+            </div>
+          </UCard>
+        </template>
+      </UTabs>
     </template>
   </UContainer>
 </template>
