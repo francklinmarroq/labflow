@@ -22,22 +22,16 @@ export interface ReferenceRangeResponse {
 }
 
 export function useReferenceRangesApi() {
-  const { public: { apiBase } } = useRuntimeConfig()
+  const api = useApiClient()
 
   const createRange = (parameterId: number, body: Omit<ReferenceRange, 'id'>) =>
-    $fetch<ReferenceRange>(`/parameters/${parameterId}/reference-ranges`, {
-      baseURL: apiBase, method: 'POST', body
-    })
+    api<ReferenceRange>(`/parameters/${parameterId}/reference-ranges`, { method: 'POST', body })
 
   const updateRange = (parameterId: number, rangeId: number, body: Omit<ReferenceRange, 'id'>) =>
-    $fetch<ReferenceRange>(`/parameters/${parameterId}/reference-ranges/${rangeId}`, {
-      baseURL: apiBase, method: 'PUT', body
-    })
+    api<ReferenceRange>(`/parameters/${parameterId}/reference-ranges/${rangeId}`, { method: 'PUT', body })
 
   const deleteRange = (parameterId: number, rangeId: number) =>
-    $fetch<ReferenceRange>(`/parameters/${parameterId}/reference-ranges/${rangeId}`, {
-      baseURL: apiBase, method: 'DELETE'
-    })
+    api<ReferenceRange>(`/parameters/${parameterId}/reference-ranges/${rangeId}`, { method: 'DELETE' })
 
   return { createRange, updateRange, deleteRange }
 }

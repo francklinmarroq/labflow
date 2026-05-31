@@ -19,16 +19,16 @@ export interface PatientResponse {
 }
 
 export function usePatientsApi() {
-  const { public: { apiBase } } = useRuntimeConfig()
+  const api = useApiClient()
 
   const createPatient = (body: Omit<Patient, 'id'>) =>
-    $fetch<Patient>('/customers', { baseURL: apiBase, method: 'POST', body })
+    api<Patient>('/customers', { method: 'POST', body })
 
   const updatePatient = (id: number, body: Omit<Patient, 'id'>) =>
-    $fetch<Patient>(`/customers/${id}`, { baseURL: apiBase, method: 'PUT', body })
+    api<Patient>(`/customers/${id}`, { method: 'PUT', body })
 
   const deletePatient = (id: number) =>
-    $fetch<Patient>(`/customers/${id}`, { baseURL: apiBase, method: 'DELETE' })
+    api<Patient>(`/customers/${id}`, { method: 'DELETE' })
 
   return { createPatient, updatePatient, deletePatient }
 }

@@ -13,16 +13,16 @@ export interface PathologyResponse {
 }
 
 export function usePathologiesApi() {
-  const { public: { apiBase } } = useRuntimeConfig()
+  const api = useApiClient()
 
   const createPathology = (body: Omit<Pathology, 'id'>) =>
-    $fetch<Pathology>('/pathologies', { baseURL: apiBase, method: 'POST', body })
+    api<Pathology>('/pathologies', { method: 'POST', body })
 
   const updatePathology = (id: number, body: Omit<Pathology, 'id'>) =>
-    $fetch<Pathology>(`/pathologies/${id}`, { baseURL: apiBase, method: 'PUT', body })
+    api<Pathology>(`/pathologies/${id}`, { method: 'PUT', body })
 
   const deletePathology = (id: number) =>
-    $fetch<Pathology>(`/pathologies/${id}`, { baseURL: apiBase, method: 'DELETE' })
+    api<Pathology>(`/pathologies/${id}`, { method: 'DELETE' })
 
   return { createPathology, updatePathology, deletePathology }
 }

@@ -15,16 +15,16 @@ export interface AgeRangeResponse {
 }
 
 export function useAgeRangesApi() {
-  const { public: { apiBase } } = useRuntimeConfig()
+  const api = useApiClient()
 
   const createAgeRange = (body: Omit<AgeRange, 'id'>) =>
-    $fetch<AgeRange>('/age-ranges', { baseURL: apiBase, method: 'POST', body })
+    api<AgeRange>('/age-ranges', { method: 'POST', body })
 
   const updateAgeRange = (id: number, body: Omit<AgeRange, 'id'>) =>
-    $fetch<AgeRange>(`/age-ranges/${id}`, { baseURL: apiBase, method: 'PUT', body })
+    api<AgeRange>(`/age-ranges/${id}`, { method: 'PUT', body })
 
   const deleteAgeRange = (id: number) =>
-    $fetch<AgeRange>(`/age-ranges/${id}`, { baseURL: apiBase, method: 'DELETE' })
+    api<AgeRange>(`/age-ranges/${id}`, { method: 'DELETE' })
 
   return { createAgeRange, updateAgeRange, deleteAgeRange }
 }

@@ -19,16 +19,16 @@ export interface Laboratory {
 }
 
 export function useLaboratoryApi() {
-  const { public: { apiBase } } = useRuntimeConfig()
+  const api = useApiClient()
 
   const getLaboratory = () =>
-    $fetch<Laboratory>('/laboratory', { baseURL: apiBase })
+    api<Laboratory>('/laboratory')
 
   const createLaboratory = (body: Omit<Laboratory, 'id'>) =>
-    $fetch<Laboratory>('/laboratory', { baseURL: apiBase, method: 'POST', body })
+    api<Laboratory>('/laboratory', { method: 'POST', body })
 
   const updateLaboratory = (id: number, body: Omit<Laboratory, 'id'>) =>
-    $fetch<Laboratory>(`/laboratory/${id}`, { baseURL: apiBase, method: 'PUT', body })
+    api<Laboratory>(`/laboratory/${id}`, { method: 'PUT', body })
 
   return { getLaboratory, createLaboratory, updateLaboratory }
 }

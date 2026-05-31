@@ -253,15 +253,14 @@ function buildHtml(data: ExamReportData): string {
 }
 
 export function useLabReport() {
-  const { public: { apiBase } } = useRuntimeConfig()
+  const api = useApiClient()
 
   const fetchReferenceRanges = async (parameterIds: number[]): Promise<Record<number, ReferenceRange[]>> => {
     const result: Record<number, ReferenceRange[]> = {}
     await Promise.all(
       parameterIds.map(async (pid) => {
         try {
-          const data = await $fetch<{ content: ReferenceRange[] }>(`/parameters/${pid}/reference-ranges`, {
-            baseURL: apiBase,
+          const data = await api<{ content: ReferenceRange[] }>(`/parameters/${pid}/reference-ranges`, {
             params: { pageSize: 50 }
           })
           result[pid] = data.content ?? []

@@ -15,16 +15,16 @@ export interface LabTestResponse {
 }
 
 export function useTestsApi() {
-  const { public: { apiBase } } = useRuntimeConfig()
+  const api = useApiClient()
 
   const createTest = (body: Omit<LabTest, 'id'>) =>
-    $fetch<LabTest>('/tests', { baseURL: apiBase, method: 'POST', body })
+    api<LabTest>('/tests', { method: 'POST', body })
 
   const updateTest = (id: number, body: Omit<LabTest, 'id'>) =>
-    $fetch<LabTest>(`/tests/${id}`, { baseURL: apiBase, method: 'PUT', body })
+    api<LabTest>(`/tests/${id}`, { method: 'PUT', body })
 
   const deleteTest = (id: number) =>
-    $fetch<LabTest>(`/tests/${id}`, { baseURL: apiBase, method: 'DELETE' })
+    api<LabTest>(`/tests/${id}`, { method: 'DELETE' })
 
   return { createTest, updateTest, deleteTest }
 }

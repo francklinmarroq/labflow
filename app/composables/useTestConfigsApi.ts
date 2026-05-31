@@ -16,16 +16,16 @@ export interface TestConfigResponse {
 }
 
 export function useTestConfigsApi() {
-  const { public: { apiBase } } = useRuntimeConfig()
+  const api = useApiClient()
 
   const createTestConfig = (body: Omit<TestConfig, 'id'>) =>
-    $fetch<TestConfig>('/test-configs', { baseURL: apiBase, method: 'POST', body })
+    api<TestConfig>('/test-configs', { method: 'POST', body })
 
   const updateTestConfig = (id: number, body: Omit<TestConfig, 'id'>) =>
-    $fetch<TestConfig>(`/test-configs/${id}`, { baseURL: apiBase, method: 'PUT', body })
+    api<TestConfig>(`/test-configs/${id}`, { method: 'PUT', body })
 
   const deleteTestConfig = (id: number) =>
-    $fetch<TestConfig>(`/test-configs/${id}`, { baseURL: apiBase, method: 'DELETE' })
+    api<TestConfig>(`/test-configs/${id}`, { method: 'DELETE' })
 
   return { createTestConfig, updateTestConfig, deleteTestConfig }
 }

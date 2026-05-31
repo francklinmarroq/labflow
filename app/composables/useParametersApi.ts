@@ -19,16 +19,16 @@ export interface ParameterResponse {
 }
 
 export function useParametersApi() {
-  const { public: { apiBase } } = useRuntimeConfig()
+  const api = useApiClient()
 
   const createParameter = (body: Omit<Parameter, 'id'>) =>
-    $fetch<Parameter>('/parameters', { baseURL: apiBase, method: 'POST', body })
+    api<Parameter>('/parameters', { method: 'POST', body })
 
   const updateParameter = (id: number, body: Omit<Parameter, 'id'>) =>
-    $fetch<Parameter>(`/parameters/${id}`, { baseURL: apiBase, method: 'PUT', body })
+    api<Parameter>(`/parameters/${id}`, { method: 'PUT', body })
 
   const deleteParameter = (id: number) =>
-    $fetch<Parameter>(`/parameters/${id}`, { baseURL: apiBase, method: 'DELETE' })
+    api<Parameter>(`/parameters/${id}`, { method: 'DELETE' })
 
   return { createParameter, updateParameter, deleteParameter }
 }

@@ -13,16 +13,16 @@ export interface UnitResponse {
 }
 
 export function useUnitsApi() {
-  const { public: { apiBase } } = useRuntimeConfig()
+  const api = useApiClient()
 
   const createUnit = (body: { unitSymbol: string }) =>
-    $fetch<Unit>('/units', { baseURL: apiBase, method: 'POST', body })
+    api<Unit>('/units', { method: 'POST', body })
 
   const updateUnit = (id: number, body: { unitSymbol: string }) =>
-    $fetch<Unit>(`/units/${id}`, { baseURL: apiBase, method: 'PUT', body })
+    api<Unit>(`/units/${id}`, { method: 'PUT', body })
 
   const deleteUnit = (id: number) =>
-    $fetch<Unit>(`/units/${id}`, { baseURL: apiBase, method: 'DELETE' })
+    api<Unit>(`/units/${id}`, { method: 'DELETE' })
 
   return { createUnit, updateUnit, deleteUnit }
 }
