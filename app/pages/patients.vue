@@ -37,10 +37,17 @@ const columns: TableColumn<Patient>[] = [
   { accessorKey: 'name', header: 'Name' },
   { id: 'nationalId', header: 'ID Number' },
   { id: 'age', header: 'Age' },
+  { id: 'sex', header: 'Sex' },
   { id: 'phone', header: 'Phone' },
   { id: 'pathologies', header: 'Pathologies' },
   { id: 'actions', header: '' }
 ]
+
+function formatSex(sex: string | null): string {
+  if (sex === 'MALE') return 'Male'
+  if (sex === 'FEMALE') return 'Female'
+  return '—'
+}
 
 // --- Search ---
 const searchQuery = ref('')
@@ -139,6 +146,10 @@ async function confirmDelete() {
 
         <template #age-cell="{ row }">
           {{ formatAge(row.original.ageInDays) }}
+        </template>
+
+        <template #sex-cell="{ row }">
+          <span class="text-muted">{{ formatSex(row.original.sex) }}</span>
         </template>
 
         <template #phone-cell="{ row }">

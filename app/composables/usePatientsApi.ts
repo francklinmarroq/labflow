@@ -1,7 +1,10 @@
+export type PatientSex = 'MALE' | 'FEMALE'
+
 export interface Patient {
   id: number
   name: string
   ageInDays: number | null
+  sex: PatientSex | null
   nationalIdNumber: string | null
   taxNumber: string | null
   phone: string | null

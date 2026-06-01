@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Patient } from '~/composables/usePatientsApi'
+import type { Patient, PatientSex } from '~/composables/usePatientsApi'
 import type { Pathology, PathologyResponse } from '~/composables/usePathologiesApi'
 
 const props = defineProps<{
@@ -27,6 +27,7 @@ const isSubmitting = ref(false)
 const form = reactive({
   name: '',
   dateOfBirth: '',
+  sex: undefined as PatientSex | undefined,
   nationalIdNumber: '',
   taxNumber: '',
   phone: '',
@@ -62,6 +63,7 @@ function resetForm() {
   pathologySearch.value = ''
   form.name = ''
   form.dateOfBirth = ''
+  form.sex = undefined
   form.nationalIdNumber = ''
   form.taxNumber = ''
   form.phone = ''
@@ -75,6 +77,7 @@ watch(() => props.open, (isOpen) => {
   if (props.isEditing && props.patient) {
     form.name = props.patient.name
     form.dateOfBirth = props.patient.ageInDays != null ? ageInDaysToBirthDate(props.patient.ageInDays) : ''
+    form.sex = props.patient.sex ?? undefined
     form.nationalIdNumber = props.patient.nationalIdNumber ?? ''
     form.taxNumber = props.patient.taxNumber ?? ''
     form.phone = props.patient.phone ?? ''
@@ -90,6 +93,7 @@ async function save() {
     const body = {
       name: form.name.trim(),
       ageInDays: form.dateOfBirth ? birthDateToAgeInDays(form.dateOfBirth) : null,
+      sex: form.sex ?? null,
       nationalIdNumber: form.nationalIdNumber.trim() || null,
       taxNumber: form.taxNumber.trim() || null,
       phone: form.phone.trim() || null,
@@ -139,14 +143,26 @@ async function save() {
             />
           </UFormField>
 
-          <UFormField label="Phone">
-            <UInput
-              v-model="form.phone"
-              placeholder="e.g. +504 9999-9999"
-              inputmode="tel"
+          <UFormField label="Sex">
+            <USelect
+              v-model="form.sex"
+              :items="[
+                { label: 'Not specified', value: undefined },
+                { label: 'Male', value: 'MALE' },
+                { label: 'Female', value: 'FEMALE' }
+              ]"
+              placeholder="Not specified"
             />
           </UFormField>
         </div>
+
+        <UFormField label="Phone">
+          <UInput
+            v-model="form.phone"
+            placeholder="e.g. +504 9999-9999"
+            inputmode="tel"
+          />
+        </UFormField>
 
         <div class="grid grid-cols-2 gap-4">
           <UFormField label="National ID Number">

@@ -45,13 +45,18 @@ function fmtAge(ageInDays: number | null): string {
 
 function pickRange(
   ranges: ReferenceRange[],
+  patientSex: string | null,
   patientAgeInDays: number | null,
   ageRangeMap: Record<number, AgeRange>
 ): ReferenceRange | null {
   if (!ranges.length) return null
 
+  // Filter to ranges that apply to the patient's sex (sex-specific or universal)
+  const sexFiltered = ranges.filter(r => r.sex == null || r.sex === patientSex)
+  const candidates = sexFiltered.length > 0 ? sexFiltered : ranges
+
   if (patientAgeInDays != null) {
-    const matched = ranges.find((r) => {
+    const matched = candidates.find((r) => {
       if (r.ageRangeId == null) return false
       const ar = ageRangeMap[r.ageRangeId]
       if (!ar) return false
@@ -62,8 +67,11 @@ function pickRange(
     if (matched) return matched
   }
 
-  // Fallback: prefer a universal range (no age constraint), then first entry
-  return ranges.find(r => r.ageRangeId == null) ?? ranges[0] ?? null
+  // Fallback: prefer a sex-specific universal range, then any universal, then first
+  return candidates.find(r => r.ageRangeId == null && r.sex === patientSex)
+    ?? candidates.find(r => r.ageRangeId == null)
+    ?? candidates[0]
+    ?? null
 }
 
 function getFlag(value: string | null, range: ReferenceRange | null, valueType: string | null): string {
@@ -98,7 +106,7 @@ function buildHtml(data: ExamReportData): string {
     const paramName = param?.name ?? `#${result.parameterId}`
     const unit = param?.unitId != null ? (unitMap[param.unitId] ?? '') : ''
     const ranges = referenceRanges[result.parameterId] ?? []
-    const range = pickRange(ranges, patient.ageInDays, ageRangeMap)
+    const range = pickRange(ranges, patient.sex ?? null, patient.ageInDays, ageRangeMap)
     const flag = getFlag(result.value, range, param?.valueType ?? null)
     const ref = refText(range, unit, param?.valueType ?? null)
     const valDisplay = flag ? `${result.value ?? '—'} (${flag})` : (result.value ?? '—')
