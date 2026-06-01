@@ -289,6 +289,13 @@ function buildHtml(data: ExamReportData): string {
     </div>
   </div>
 
+  <div style="margin-top:32px;display:flex;justify-content:flex-end">
+    <div style="text-align:center;width:${sz('260px', '220px')}">
+      <div style="border-top:1px solid #333;margin-bottom:5px"></div>
+      <div style="font-size:${sz('10px', '9px')};font-family:Arial,sans-serif;color:#333">Microbiologo Responsable</div>
+    </div>
+  </div>
+
   <div class="footer">
     Impreso el ${fmtDateTime(new Date().toISOString())} &nbsp;·&nbsp; ${lab.name}
   </div>
