@@ -58,7 +58,7 @@ useSeoMeta({
           </template>
         </UDashboardNavbar>
 
-        <UMain>
+        <UMain class="overflow-y-auto">
           <NuxtPage />
         </UMain>
       </UDashboardPanel>
