@@ -282,6 +282,16 @@ async function confirmDelete() {
 
         <template #actions-cell="{ row }">
           <div class="flex items-center justify-end gap-1">
+            <UTooltip text="View history">
+              <UButton
+                icon="i-lucide-clock"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                aria-label="View history"
+                :to="`/patients/${row.original.id}`"
+              />
+            </UTooltip>
             <UTooltip text="Edit patient">
               <UButton
                 icon="i-lucide-pencil"

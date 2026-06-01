@@ -5,7 +5,7 @@
     </div>
     <div class="flex flex-col leading-none">
       <span class="font-bold text-[15px] tracking-tight text-highlighted">LabFlow</span>
-      <span class="text-[10px] text-muted tracking-widest uppercase font-medium">Clinical LIS</span>
+      <span class="text-[10px] text-muted tracking-widest uppercase font-medium">Clinical Laboratory Information System</span>
     </div>
   </div>
 </template>
