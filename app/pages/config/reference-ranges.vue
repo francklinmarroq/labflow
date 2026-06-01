@@ -88,10 +88,7 @@ const columns = computed((): TableColumn<ReferenceRange>[] => {
     { id: 'ageRange', header: 'Age Range' }
   ]
   if (isQuantitative.value) {
-    base.push(
-      { id: 'lowerLimit', header: 'Min' },
-      { id: 'upperLimit', header: 'Max' }
-    )
+    base.push({ id: 'range', header: 'Range' })
   } else {
     base.push({ id: 'interpretation', header: 'Expected Value' })
   }
@@ -117,16 +114,29 @@ const selected = ref<ReferenceRange | null>(null)
 const form = reactive({
   sex: undefined as Sex | undefined,
   ageRangeId: undefined as number | undefined,
-  lowerLimit: '',
-  upperLimit: '',
+  rangeText: '',
   criticalLow: '',
   criticalHigh: '',
   interpretationText: ''
 })
 
-function toNum(v: string): number | null {
-  const s = v.trim()
-  return s === '' ? null : Number(s)
+function parseRangeText(text: string): { lowerLimit: number | null, upperLimit: number | null } {
+  const s = text.trim()
+  if (!s) return { lowerLimit: null, upperLimit: null }
+  const ltMatch = s.match(/^<=?\s*(\d+\.?\d*)$/)
+  if (ltMatch) return { lowerLimit: null, upperLimit: Number(ltMatch[1]) }
+  const gtMatch = s.match(/^>=?\s*(\d+\.?\d*)$/)
+  if (gtMatch) return { lowerLimit: Number(gtMatch[1]), upperLimit: null }
+  const rangeMatch = s.match(/^(\d+\.?\d*)\s*[-–]\s*(\d+\.?\d*)$/)
+  if (rangeMatch) return { lowerLimit: Number(rangeMatch[1]), upperLimit: Number(rangeMatch[2]) }
+  return { lowerLimit: null, upperLimit: null }
+}
+
+function rangeToText(lower: number | null, upper: number | null): string {
+  if (lower != null && upper != null) return `${lower}-${upper}`
+  if (lower != null) return `>${lower}`
+  if (upper != null) return `<${upper}`
+  return ''
 }
 
 function openCreate() {
@@ -134,8 +144,7 @@ function openCreate() {
   selected.value = null
   form.sex = undefined
   form.ageRangeId = undefined
-  form.lowerLimit = ''
-  form.upperLimit = ''
+  form.rangeText = ''
   form.criticalLow = ''
   form.criticalHigh = ''
   form.interpretationText = ''
@@ -147,8 +156,7 @@ function openEdit(range: ReferenceRange) {
   selected.value = range
   form.sex = range.sex ?? undefined
   form.ageRangeId = range.ageRangeId ?? undefined
-  form.lowerLimit = range.lowerLimit?.toString() ?? ''
-  form.upperLimit = range.upperLimit?.toString() ?? ''
+  form.rangeText = rangeToText(range.lowerLimit, range.upperLimit)
   form.criticalLow = range.criticalLow?.toString() ?? ''
   form.criticalHigh = range.criticalHigh?.toString() ?? ''
   form.interpretationText = range.interpretationText ?? ''
@@ -159,15 +167,16 @@ async function save() {
   if (!selectedParameterId.value) return
   isSubmitting.value = true
   try {
+    const { lowerLimit, upperLimit } = isQuantitative.value ? parseRangeText(form.rangeText) : { lowerLimit: null, upperLimit: null }
     const body = {
       parameterId: selectedParameterId.value,
       sex: form.sex ?? null,
       ageRangeId: form.ageRangeId ?? null,
-      lowerLimit: isQuantitative.value ? toNum(form.lowerLimit) : null,
-      upperLimit: isQuantitative.value ? toNum(form.upperLimit) : null,
+      lowerLimit,
+      upperLimit,
       criticalLow: null,
       criticalHigh: null,
-      interpretationText: isQuantitative.value ? (form.interpretationText.trim() || null) : (form.interpretationText.trim() || null)
+      interpretationText: form.interpretationText.trim() || null
     }
     if (isEditing.value && selected.value) {
       await updateRange(selectedParameterId.value, selected.value.id, body)
@@ -348,12 +357,8 @@ async function confirmDelete() {
                 {{ ageRangeLabel(row.original.ageRangeId) }}
               </template>
 
-              <template #lowerLimit-cell="{ row }">
-                {{ row.original.lowerLimit ?? '—' }}
-              </template>
-
-              <template #upperLimit-cell="{ row }">
-                {{ row.original.upperLimit ?? '—' }}
+              <template #range-cell="{ row }">
+                {{ rangeToText(row.original.lowerLimit, row.original.upperLimit) || '—' }}
               </template>
 
               <template #interpretation-cell="{ row }">
@@ -424,22 +429,12 @@ async function confirmDelete() {
           <template v-if="isQuantitative">
             <USeparator label="Normal range" />
 
-            <div class="grid grid-cols-2 gap-4">
-              <UFormField label="Lower Limit">
-                <UInput
-                  v-model="form.lowerLimit"
-                  inputmode="numeric"
-                  placeholder="e.g. 70"
-                />
-              </UFormField>
-              <UFormField label="Upper Limit">
-                <UInput
-                  v-model="form.upperLimit"
-                  inputmode="numeric"
-                  placeholder="e.g. 100"
-                />
-              </UFormField>
-            </div>
+            <UFormField label="Reference Range" hint="e.g. 70-100, <200, >10">
+              <UInput
+                v-model="form.rangeText"
+                placeholder="e.g. 70-100, <200, >10"
+              />
+            </UFormField>
           </template>
 
           <template v-else>
