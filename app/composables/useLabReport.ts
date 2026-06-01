@@ -4,6 +4,7 @@ import type { LabOrder } from './useLabOrdersApi'
 import type { TestRun } from './useTestRunsApi'
 import type { Parameter } from './useParametersApi'
 import type { ReferenceRange } from './useReferenceRangesApi'
+import type { AgeRange } from './useAgeRangesApi'
 
 export type PrintFormat = 'A4' | 'A5'
 
@@ -17,6 +18,7 @@ export interface ExamReportData {
   paramMap: Record<string, Parameter>
   unitMap: Record<string, string>
   referenceRanges: Record<number, ReferenceRange[]>
+  ageRanges: AgeRange[]
   format?: PrintFormat
 }
 
@@ -41,58 +43,72 @@ function fmtAge(ageInDays: number | null): string {
   return months > 0 ? `${months} meses` : `${ageInDays} días`
 }
 
-function getFlag(value: string | null, ranges: ReferenceRange[]): string {
-  if (!value || !ranges.length) return ''
+function pickRange(
+  ranges: ReferenceRange[],
+  patientAgeInDays: number | null,
+  ageRangeMap: Record<number, AgeRange>
+): ReferenceRange | null {
+  if (!ranges.length) return null
+
+  if (patientAgeInDays != null) {
+    const matched = ranges.find((r) => {
+      if (r.ageRangeId == null) return false
+      const ar = ageRangeMap[r.ageRangeId]
+      if (!ar) return false
+      const minOk = ar.minAgeDays == null || patientAgeInDays >= ar.minAgeDays
+      const maxOk = ar.maxAgeDays == null || patientAgeInDays <= ar.maxAgeDays
+      return minOk && maxOk
+    })
+    if (matched) return matched
+  }
+
+  // Fallback: prefer a universal range (no age constraint), then first entry
+  return ranges.find(r => r.ageRangeId == null) ?? ranges[0] ?? null
+}
+
+function getFlag(value: string | null, range: ReferenceRange | null): string {
+  if (!value || !range) return ''
   const num = parseFloat(value)
   if (isNaN(num)) return ''
-  const r = ranges[0]
-  if (!r) return ''
-  if (r.criticalLow != null && num < r.criticalLow) return 'CC'
-  if (r.criticalHigh != null && num > r.criticalHigh) return 'CC'
-  if (r.lowerLimit != null && num < r.lowerLimit) return 'L'
-  if (r.upperLimit != null && num > r.upperLimit) return 'H'
+  if (range.criticalLow != null && num < range.criticalLow) return 'CC'
+  if (range.criticalHigh != null && num > range.criticalHigh) return 'CC'
+  if (range.lowerLimit != null && num < range.lowerLimit) return 'L'
+  if (range.upperLimit != null && num > range.upperLimit) return 'H'
   return ''
 }
 
-function flagColor(flag: string): string {
-  if (flag === 'CC') return '#dc2626'
-  if (flag === 'H' || flag === 'L') return '#d97706'
-  return ''
-}
-
-function refText(ranges: ReferenceRange[], unit: string): string {
-  if (!ranges.length) return '—'
-  const r = ranges[0]
-  if (!r) return '—'
-  if (r.interpretationText) return r.interpretationText
+function refText(range: ReferenceRange | null, unit: string): string {
+  if (!range) return '—'
+  if (range.interpretationText) return range.interpretationText
   const u = unit ? ` ${unit}` : ''
-  if (r.lowerLimit != null && r.upperLimit != null) return `${r.lowerLimit} – ${r.upperLimit}${u}`
-  if (r.lowerLimit != null) return `≥ ${r.lowerLimit}${u}`
-  if (r.upperLimit != null) return `≤ ${r.upperLimit}${u}`
+  if (range.lowerLimit != null && range.upperLimit != null) return `${range.lowerLimit} – ${range.upperLimit}${u}`
+  if (range.lowerLimit != null) return `>= ${range.lowerLimit}${u}`
+  if (range.upperLimit != null) return `<= ${range.upperLimit}${u}`
   return '—'
 }
 
 function buildHtml(data: ExamReportData): string {
-  const { lab, patient, order, testName, testConfigName, run, paramMap, unitMap, referenceRanges, format = 'A4' } = data
+  const { lab, patient, order, testName, testConfigName, run, paramMap, unitMap, referenceRanges, ageRanges, format = 'A4' } = data
   const isA5 = format === 'A5'
   const sz = (a4: string, a5: string) => (isA5 ? a5 : a4)
+
+  const ageRangeMap: Record<number, AgeRange> = Object.fromEntries(ageRanges.map(ar => [ar.id, ar]))
 
   const rows = run.results.map((result) => {
     const param = paramMap[result.parameterId]
     const paramName = param?.name ?? `#${result.parameterId}`
     const unit = param?.unitId != null ? (unitMap[param.unitId] ?? '') : ''
     const ranges = referenceRanges[result.parameterId] ?? []
-    const flag = getFlag(result.value, ranges)
-    const fc = flagColor(flag)
-    const ref = refText(ranges, unit)
-    const valStyle = fc ? `color:${fc};font-weight:700` : 'font-weight:700'
+    const range = pickRange(ranges, patient.ageInDays, ageRangeMap)
+    const flag = getFlag(result.value, range)
+    const ref = refText(range, unit)
+    const valDisplay = flag ? `${result.value ?? '—'} (${flag})` : (result.value ?? '—')
 
     return `<tr>
-      <td style="padding:7px 12px;border-bottom:1px solid #e5e7eb">${paramName}</td>
-      <td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;${valStyle}">${result.value ?? '—'}</td>
-      <td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;color:#6b7280">${unit}</td>
-      <td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;color:#6b7280;font-size:12px">${ref}</td>
-      <td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;color:${fc || '#9ca3af'};font-weight:700;font-size:12px">${flag}</td>
+      <td style="padding:5px 10px;border-bottom:0.5px solid #ddd">${paramName}</td>
+      <td style="padding:5px 10px;border-bottom:0.5px solid #ddd;font-weight:${flag ? '700' : '400'}">${valDisplay}</td>
+      <td style="padding:5px 10px;border-bottom:0.5px solid #ddd;color:#444">${unit}</td>
+      <td style="padding:5px 10px;border-bottom:0.5px solid #ddd;color:#444;font-size:${sz('11px', '10px')}">${ref}</td>
     </tr>`
   }).join('')
 
@@ -102,87 +118,120 @@ function buildHtml(data: ExamReportData): string {
   <meta charset="UTF-8">
   <title>${testName} — ${patient.name}</title>
   <style>
-    @page { size: ${format}; margin: 15mm 15mm 20mm 15mm; }
+    @page { size: ${format}; margin: 20mm 18mm 20mm 18mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: Arial, sans-serif;
+      font-family: Georgia, 'Times New Roman', Times, serif;
       font-size: ${sz('13px', '11px')};
-      color: #1f2937;
+      color: #111;
       background: #fff;
+      line-height: 1.5;
     }
     .header {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      padding-bottom: 12px;
-      border-bottom: 2.5px solid #0ea5e9;
-      margin-bottom: 14px;
+      align-items: flex-end;
+      padding-bottom: 10px;
+      border-bottom: 1.5px solid #111;
+      margin-bottom: 16px;
     }
     .lab-name {
-      font-size: ${sz('22px', '18px')};
-      font-weight: 800;
-      color: #0ea5e9;
+      font-size: ${sz('20px', '16px')};
+      font-weight: bold;
+      letter-spacing: 0.01em;
+      color: #111;
     }
-    .lab-meta { color: #6b7280; font-size: ${sz('11px', '10px')}; margin-top: 4px; }
-    .lab-meta span { display: block; }
-    .rpt-label { text-align: right; font-size: ${sz('11px', '10px')}; color: #6b7280; }
-    .rpt-label .title { font-size: ${sz('15px', '13px')}; font-weight: 700; color: #1f2937; display: block; margin-bottom: 2px; }
-    .section { margin-bottom: 12px; }
-    .section-title {
+    .lab-meta {
       font-size: ${sz('10px', '9px')};
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: #9ca3af;
-      margin-bottom: 6px;
+      color: #444;
+      margin-top: 4px;
+      line-height: 1.7;
     }
-    .info-grid {
+    .rpt-label {
+      text-align: right;
+      font-size: ${sz('10px', '9px')};
+      color: #444;
+      line-height: 1.7;
+    }
+    .rpt-label .title {
+      font-size: ${sz('11px', '10px')};
+      font-weight: bold;
+      color: #111;
+      display: block;
+      margin-bottom: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .section { margin-bottom: 14px; }
+    .section-title {
+      font-size: ${sz('9px', '8px')};
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #555;
+      border-bottom: 0.75px solid #bbb;
+      padding-bottom: 3px;
+      margin-bottom: 8px;
+    }
+    .patient-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 6px;
+      gap: 10px;
+      border: 0.75px solid #ccc;
       padding: 10px 14px;
     }
-    .info-item .lbl { font-size: ${sz('10px', '9px')}; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; }
-    .info-item .val { font-size: ${sz('13px', '11px')}; font-weight: 600; color: #1f2937; margin-top: 1px; }
-    .exam-box {
-      background: #eff6ff;
-      border: 1px solid #bfdbfe;
-      border-radius: 6px;
-      padding: 10px 14px;
-      margin-bottom: 14px;
-    }
-    .exam-name { font-size: ${sz('16px', '14px')}; font-weight: 800; color: #1e40af; }
-    .exam-sub { font-size: ${sz('11px', '10px')}; color: #6b7280; margin-top: 3px; }
-    table { width: 100%; border-collapse: collapse; }
-    thead tr { background: #f3f4f6; }
-    th {
-      padding: 8px 12px;
-      text-align: left;
-      font-size: ${sz('10px', '9px')};
-      font-weight: 700;
+    .info-item .lbl {
+      font-size: ${sz('9px', '8px')};
+      color: #666;
       text-transform: uppercase;
       letter-spacing: 0.06em;
-      color: #6b7280;
+      font-family: Arial, sans-serif;
     }
-    td { font-size: ${sz('13px', '11px')}; }
+    .info-item .val {
+      font-size: ${sz('13px', '11px')};
+      font-weight: bold;
+      color: #111;
+      margin-top: 1px;
+    }
+    .exam-heading {
+      font-size: ${sz('15px', '13px')};
+      font-weight: bold;
+      color: #111;
+      margin-bottom: 3px;
+    }
+    .exam-sub {
+      font-size: ${sz('10px', '9px')};
+      color: #555;
+      font-family: Arial, sans-serif;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { border-bottom: 1.25px solid #333; }
+    th {
+      padding: 6px 10px;
+      text-align: left;
+      font-size: ${sz('9px', '8px')};
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #333;
+      font-family: Arial, sans-serif;
+    }
+    td { font-size: ${sz('12px', '10px')}; color: #111; }
+    tbody tr:nth-child(even) td { background: #f9f9f9; }
     .legend {
       margin-top: 8px;
-      font-size: ${sz('10px', '9px')};
-      color: #9ca3af;
-      display: flex;
-      gap: 14px;
+      font-size: ${sz('9px', '8px')};
+      color: #666;
+      font-family: Arial, sans-serif;
     }
     .footer {
-      margin-top: 18px;
-      padding-top: 10px;
-      border-top: 1px solid #e5e7eb;
-      display: flex;
-      justify-content: space-between;
-      font-size: ${sz('10px', '9px')};
-      color: #9ca3af;
+      margin-top: 20px;
+      padding-top: 8px;
+      border-top: 0.75px solid #bbb;
+      font-size: ${sz('9px', '8px')};
+      color: #666;
+      text-align: right;
+      font-family: Arial, sans-serif;
     }
     @media print { body { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
   </style>
@@ -192,34 +241,34 @@ function buildHtml(data: ExamReportData): string {
     <div>
       <div class="lab-name">${lab.name}</div>
       <div class="lab-meta">
-        ${lab.address1 ? `<span>${lab.address1}${lab.address2 ? ', ' + lab.address2 : ''}</span>` : ''}
-        ${lab.phone ? `<span>Tel: ${lab.phone}</span>` : ''}
-        ${lab.email ? `<span>${lab.email}</span>` : ''}
-        ${lab.rtn ? `<span>RTN: ${lab.rtn}</span>` : ''}
+        ${lab.address1 ? `${lab.address1}${lab.address2 ? ', ' + lab.address2 : ''}<br>` : ''}
+        ${lab.phone ? `Tel. ${lab.phone}<br>` : ''}
+        ${lab.email ? `${lab.email}<br>` : ''}
+        ${lab.rtn ? `RTN: ${lab.rtn}` : ''}
       </div>
     </div>
     <div class="rpt-label">
       <span class="title">Reporte de Laboratorio</span>
-      <span>Orden #${order.id}</span>
-      <span>Fecha solicitud: ${fmtDate(order.requestedAt)}</span>
+      <span>No. de Orden: ${order.id}</span><br>
+      <span>Fecha: ${fmtDate(order.requestedAt)}</span>
     </div>
   </div>
 
   <div class="section">
     <div class="section-title">Datos del Paciente</div>
-    <div class="info-grid">
+    <div class="patient-grid">
       <div class="info-item"><div class="lbl">Nombre</div><div class="val">${patient.name}</div></div>
       <div class="info-item"><div class="lbl">Edad</div><div class="val">${fmtAge(patient.ageInDays)}</div></div>
       <div class="info-item"><div class="lbl">No. Identidad</div><div class="val">${patient.nationalIdNumber ?? '—'}</div></div>
     </div>
   </div>
 
-  <div class="exam-box">
-    <div class="exam-name">${testName}</div>
+  <div class="section">
+    <div class="exam-heading">${testName}</div>
     ${testConfigName ? `<div class="exam-sub">Perfil: ${testConfigName}</div>` : ''}
-    <div class="exam-sub" style="margin-top:6px">
-      Corrida #${run.runNumber ?? '—'} &nbsp;·&nbsp; ${fmtDateTime(run.performedAt)}
-      ${run.isVerified ? '&nbsp;·&nbsp; <strong style="color:#059669">✓ Verificado</strong>' : ''}
+    <div class="exam-sub" style="margin-top:4px">
+      Corrida No. ${run.runNumber ?? '—'} &nbsp;&nbsp; ${fmtDateTime(run.performedAt)}
+      ${run.isVerified ? '&nbsp;&nbsp; Verificado' : ''}
     </div>
   </div>
 
@@ -228,25 +277,21 @@ function buildHtml(data: ExamReportData): string {
     <table>
       <thead>
         <tr>
-          <th>Parámetro</th>
+          <th>Parametro</th>
           <th>Resultado</th>
           <th>Unidad</th>
           <th>Valores de Referencia</th>
-          <th>Flag</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
     </table>
     <div class="legend">
-      <span><strong style="color:#d97706">H</strong> = Alto</span>
-      <span><strong style="color:#d97706">L</strong> = Bajo</span>
-      <span><strong style="color:#dc2626">CC</strong> = Valor Crítico</span>
+      (H) = Alto &nbsp;&nbsp; (L) = Bajo &nbsp;&nbsp; (CC) = Valor Critico
     </div>
   </div>
 
   <div class="footer">
-    <span>Impreso el ${fmtDateTime(new Date().toISOString())}</span>
-    <span>${lab.name} · LabFlow</span>
+    Impreso el ${fmtDateTime(new Date().toISOString())} &nbsp;·&nbsp; ${lab.name}
   </div>
 </body>
 </html>`
@@ -272,6 +317,15 @@ export function useLabReport() {
     return result
   }
 
+  const fetchAgeRanges = async (): Promise<AgeRange[]> => {
+    try {
+      const data = await api<{ content: AgeRange[] }>('/age-ranges', { params: { pageSize: 200 } })
+      return data.content ?? []
+    } catch {
+      return []
+    }
+  }
+
   const printExamReport = (data: ExamReportData) => {
     const html = buildHtml(data)
     const win = window.open('', '_blank', 'width=900,height=700')
@@ -282,5 +336,5 @@ export function useLabReport() {
     setTimeout(() => win.print(), 600)
   }
 
-  return { fetchReferenceRanges, printExamReport }
+  return { fetchReferenceRanges, fetchAgeRanges, printExamReport }
 }

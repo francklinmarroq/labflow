@@ -8,6 +8,7 @@ import type { UnitResponse } from '~/composables/useUnitsApi'
 import type { TestRun } from '~/composables/useTestRunsApi'
 import type { Laboratory } from '~/composables/useLaboratoryApi'
 import type { ReferenceRange } from '~/composables/useReferenceRangesApi'
+import type { AgeRange } from '~/composables/useAgeRangesApi'
 import type { PrintFormat } from '~/composables/useLabReport'
 
 useSeoMeta({ title: 'Results — LabFlow' })
@@ -15,7 +16,7 @@ useSeoMeta({ title: 'Results — LabFlow' })
 const api = useApiClient()
 const { getRunsByLabTest } = useTestRunsApi()
 const { getLaboratory } = useLaboratoryApi()
-const { fetchReferenceRanges, printExamReport } = useLabReport()
+const { fetchReferenceRanges, fetchAgeRanges, printExamReport } = useLabReport()
 const toast = useToast()
 
 const { data: orderData } = await useAuthFetch<LabOrderResponse>('/orders', {
@@ -112,6 +113,7 @@ const loadingTests = ref(false)
 const orderReferenceRanges = ref<Record<number, ReferenceRange[]>>({})
 
 const labInfo = ref<Laboratory | null>(null)
+const allAgeRanges = ref<AgeRange[]>([])
 const printFormat = ref<PrintFormat>('A4')
 const printingId = ref<number | null>(null)
 const printingAll = ref(false)
@@ -122,6 +124,7 @@ onMounted(async () => {
   } catch {
     // lab info not configured yet, print will still work without it
   }
+  allAgeRanges.value = await fetchAgeRanges()
 })
 
 function getActiveRun(runs: TestRun[]): TestRun | null {
@@ -193,6 +196,7 @@ function buildReportBase() {
     paramMap: paramMap.value,
     unitMap: unitMap.value,
     referenceRanges: orderReferenceRanges.value,
+    ageRanges: allAgeRanges.value,
     format: printFormat.value
   }
 }
