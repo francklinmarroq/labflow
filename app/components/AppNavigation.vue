@@ -1,92 +1,42 @@
 <script setup lang="ts">
 const links = [
-  {
-    label: 'Dashboard',
-    icon: 'i-lucide-layout-dashboard',
-    to: '/'
-  },
-  {
-    label: 'Patients',
-    icon: 'i-lucide-users',
-    to: '/patients'
-  },
-  {
-    label: 'Lab Orders',
-    icon: 'i-lucide-clipboard-list',
-    to: '/orders'
-  },
-  {
-    label: 'Lab Workspace',
-    icon: 'i-lucide-flask-conical',
-    to: '/test-runs'
-  },
-  {
-    label: 'Results',
-    icon: 'i-lucide-file-chart-line',
-    to: '/results'
-  }
+  { label: 'Dashboard', icon: 'i-lucide-layout-dashboard', to: '/' },
+  { label: 'Patients', icon: 'i-lucide-users', to: '/patients' },
+  { label: 'Lab Orders', icon: 'i-lucide-clipboard-list', to: '/orders' },
+  { label: 'Workspace', icon: 'i-lucide-flask-conical', to: '/test-runs' },
+  { label: 'Results', icon: 'i-lucide-file-chart-line', to: '/results' }
 ]
 
 const configLinks = [
-  {
-    label: 'Laboratorio',
-    icon: 'i-lucide-building-2',
-    to: '/config/laboratory'
-  },
-  {
-    label: 'Units',
-    icon: 'i-lucide-scale',
-    to: '/config/units'
-  },
-  {
-    label: 'Age Ranges',
-    icon: 'i-lucide-calendar-range',
-    to: '/config/age-ranges'
-  },
-  {
-    label: 'Parameters',
-    icon: 'i-lucide-sliders-horizontal',
-    to: '/config/parameters'
-  },
-  {
-    label: 'Reference Ranges',
-    icon: 'i-lucide-ruler',
-    to: '/config/reference-ranges'
-  },
-  {
-    label: 'Tests',
-    icon: 'i-lucide-test-tube',
-    to: '/config/tests'
-  },
-  {
-    label: 'Test Templates',
-    icon: 'i-lucide-flask-conical',
-    to: '/config/test-configs'
-  },
-  {
-    label: 'Pathologies',
-    icon: 'i-lucide-microscope',
-    to: '/config/pathologies'
-  }
+  { label: 'Laboratory', icon: 'i-lucide-building-2', to: '/config/laboratory' },
+  { label: 'Units', icon: 'i-lucide-scale', to: '/config/units' },
+  { label: 'Age Ranges', icon: 'i-lucide-calendar-range', to: '/config/age-ranges' },
+  { label: 'Parameters', icon: 'i-lucide-sliders-horizontal', to: '/config/parameters' },
+  { label: 'Ref. Ranges', icon: 'i-lucide-ruler', to: '/config/reference-ranges' },
+  { label: 'Tests', icon: 'i-lucide-test-tube', to: '/config/tests' },
+  { label: 'Test Templates', icon: 'i-lucide-layout-template', to: '/config/test-configs' },
+  { label: 'Pathologies', icon: 'i-lucide-microscope', to: '/config/pathologies' }
 ]
 </script>
 
 <template>
-  <UNavigationMenu
-    :items="links"
-    orientation="vertical"
-    class="px-2"
-  />
+  <div class="flex flex-col gap-1">
+    <UNavigationMenu
+      :items="links"
+      orientation="vertical"
+      class="px-2"
+    />
 
-  <USeparator class="my-3 mx-2" />
+    <USeparator class="my-3 mx-2" />
 
-  <p class="px-4 text-xs font-semibold text-muted uppercase tracking-widest mb-1">
-    Configuration
-  </p>
+    <p class="px-4 text-[11px] font-semibold text-muted uppercase tracking-widest mb-1">
+      Configuration
+    </p>
 
-  <UNavigationMenu
-    :items="configLinks"
-    orientation="vertical"
-    class="px-2"
-  />
+    <UNavigationMenu
+      :items="configLinks"
+      orientation="vertical"
+      class="px-2"
+    />
+  </div>
 </template>
