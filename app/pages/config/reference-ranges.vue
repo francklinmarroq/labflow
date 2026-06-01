@@ -437,14 +437,12 @@ async function confirmDelete() {
             </UFormField>
           </template>
 
-          <template v-else>
-            <UFormField label="Expected Value">
-              <UInput
-                v-model="form.interpretationText"
-                placeholder="e.g. Negativo, Ausente, No aplica"
-              />
-            </UFormField>
-          </template>
+          <UFormField label="Expected Value / Interpretation">
+            <UInput
+              v-model="form.interpretationText"
+              placeholder="e.g. Negativo, Ausente, No aplica"
+            />
+          </UFormField>
         </div>
       </template>
 
