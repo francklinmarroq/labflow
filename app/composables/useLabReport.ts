@@ -272,10 +272,9 @@ function buildHtml(data: ExamReportData): string {
 
   <div class="section">
     <div class="exam-heading">${testName}</div>
-    ${testConfigName ? `<div class="exam-sub">Perfil: ${testConfigName}</div>` : ''}
     <div class="exam-sub" style="margin-top:4px">
-      Corrida No. ${run.runNumber ?? '—'} &nbsp;&nbsp; ${fmtDateTime(run.performedAt)}
-      ${run.isVerified ? '&nbsp;&nbsp; Verificado' : ''}
+      ${fmtDateTime(run.performedAt)}
+      ${run.isVerified ? '&nbsp;&nbsp; Verificado' : '&nbsp;&nbsp; No verificado'}
     </div>
   </div>
 
@@ -305,7 +304,7 @@ function buildHtml(data: ExamReportData): string {
   </div>
 
   <div class="footer">
-    Impreso el ${fmtDateTime(new Date().toISOString())} &nbsp;·&nbsp; ${lab.name}
+    Impreso el ${fmtDateTime(new Date().toISOString())} &nbsp;·&nbsp; ${lab.name} &nbsp;·&nbsp; LabFlow - Software para laboratorios
   </div>
 </body>
 </html>`
