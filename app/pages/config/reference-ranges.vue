@@ -79,17 +79,25 @@ async function loadRanges() {
 
 watch(selectedParameterId, loadRanges)
 
+const isQuantitative = computed(() => selectedParameter.value?.valueType === 'QUANTITATIVE')
+
 // --- Table ---
-const columns: TableColumn<ReferenceRange>[] = [
-  { id: 'sex', header: 'Sex' },
-  { id: 'ageRange', header: 'Age Range' },
-  { id: 'lowerLimit', header: 'Min' },
-  { id: 'upperLimit', header: 'Max' },
-  { id: 'criticalLow', header: 'Crit. Low' },
-  { id: 'criticalHigh', header: 'Crit. High' },
-  { id: 'interpretation', header: 'Interpretation' },
-  { id: 'actions', header: '' }
-]
+const columns = computed((): TableColumn<ReferenceRange>[] => {
+  const base: TableColumn<ReferenceRange>[] = [
+    { id: 'sex', header: 'Sex' },
+    { id: 'ageRange', header: 'Age Range' }
+  ]
+  if (isQuantitative.value) {
+    base.push(
+      { id: 'lowerLimit', header: 'Min' },
+      { id: 'upperLimit', header: 'Max' }
+    )
+  } else {
+    base.push({ id: 'interpretation', header: 'Expected Value' })
+  }
+  base.push({ id: 'actions', header: '' })
+  return base
+})
 
 function sexLabel(sex: Sex | null) {
   if (!sex) return 'All'
@@ -155,11 +163,11 @@ async function save() {
       parameterId: selectedParameterId.value,
       sex: form.sex ?? null,
       ageRangeId: form.ageRangeId ?? null,
-      lowerLimit: toNum(form.lowerLimit),
-      upperLimit: toNum(form.upperLimit),
-      criticalLow: toNum(form.criticalLow),
-      criticalHigh: toNum(form.criticalHigh),
-      interpretationText: form.interpretationText.trim() || null
+      lowerLimit: isQuantitative.value ? toNum(form.lowerLimit) : null,
+      upperLimit: isQuantitative.value ? toNum(form.upperLimit) : null,
+      criticalLow: null,
+      criticalHigh: null,
+      interpretationText: isQuantitative.value ? (form.interpretationText.trim() || null) : (form.interpretationText.trim() || null)
     }
     if (isEditing.value && selected.value) {
       await updateRange(selectedParameterId.value, selected.value.id, body)
@@ -295,9 +303,19 @@ async function confirmDelete() {
           <!-- Header -->
           <div class="flex items-center justify-between shrink-0">
             <div>
-              <h2 class="text-base font-semibold text-highlighted">
-                {{ selectedParameter?.name }}
-              </h2>
+              <div class="flex items-center gap-2">
+                <h2 class="text-base font-semibold text-highlighted">
+                  {{ selectedParameter?.name }}
+                </h2>
+                <UBadge
+                  v-if="selectedParameter?.valueType"
+                  :color="isQuantitative ? 'info' : 'secondary'"
+                  variant="subtle"
+                  size="xs"
+                >
+                  {{ isQuantitative ? 'Quantitative' : 'Qualitative' }}
+                </UBadge>
+              </div>
               <p
                 v-if="selectedParameter?.section"
                 class="text-xs text-muted"
@@ -336,14 +354,6 @@ async function confirmDelete() {
 
               <template #upperLimit-cell="{ row }">
                 {{ row.original.upperLimit ?? '—' }}
-              </template>
-
-              <template #criticalLow-cell="{ row }">
-                {{ row.original.criticalLow ?? '—' }}
-              </template>
-
-              <template #criticalHigh-cell="{ row }">
-                {{ row.original.criticalHigh ?? '—' }}
               </template>
 
               <template #interpretation-cell="{ row }">
@@ -411,50 +421,35 @@ async function confirmDelete() {
             Leave <strong>Sex</strong> or <strong>Age Range</strong> empty to apply this range to all sexes or all ages respectively.
           </p>
 
-          <USeparator label="Normal range" />
+          <template v-if="isQuantitative">
+            <USeparator label="Normal range" />
 
-          <div class="grid grid-cols-2 gap-4">
-            <UFormField label="Lower Limit">
+            <div class="grid grid-cols-2 gap-4">
+              <UFormField label="Lower Limit">
+                <UInput
+                  v-model="form.lowerLimit"
+                  inputmode="numeric"
+                  placeholder="e.g. 70"
+                />
+              </UFormField>
+              <UFormField label="Upper Limit">
+                <UInput
+                  v-model="form.upperLimit"
+                  inputmode="numeric"
+                  placeholder="e.g. 100"
+                />
+              </UFormField>
+            </div>
+          </template>
+
+          <template v-else>
+            <UFormField label="Expected Value">
               <UInput
-                v-model="form.lowerLimit"
-                inputmode="numeric"
-                placeholder="e.g. 70"
+                v-model="form.interpretationText"
+                placeholder="e.g. Negativo, Ausente, No aplica"
               />
             </UFormField>
-            <UFormField label="Upper Limit">
-              <UInput
-                v-model="form.upperLimit"
-                inputmode="numeric"
-                placeholder="e.g. 100"
-              />
-            </UFormField>
-          </div>
-
-          <USeparator label="Critical values" />
-
-          <div class="grid grid-cols-2 gap-4">
-            <UFormField label="Critical Low">
-              <UInput
-                v-model="form.criticalLow"
-                inputmode="numeric"
-                placeholder="e.g. 50"
-              />
-            </UFormField>
-            <UFormField label="Critical High">
-              <UInput
-                v-model="form.criticalHigh"
-                inputmode="numeric"
-                placeholder="e.g. 400"
-              />
-            </UFormField>
-          </div>
-
-          <UFormField label="Interpretation Text">
-            <UInput
-              v-model="form.interpretationText"
-              placeholder="e.g. Normal fasting glucose"
-            />
-          </UFormField>
+          </template>
         </div>
       </template>
 
