@@ -66,24 +66,23 @@ function pickRange(
   return ranges.find(r => r.ageRangeId == null) ?? ranges[0] ?? null
 }
 
-function getFlag(value: string | null, range: ReferenceRange | null): string {
-  if (!value || !range) return ''
+function getFlag(value: string | null, range: ReferenceRange | null, valueType: string | null): string {
+  if (!value || !range || valueType !== 'QUANTITATIVE') return ''
   const num = parseFloat(value)
   if (isNaN(num)) return ''
-  if (range.criticalLow != null && num < range.criticalLow) return 'CC'
-  if (range.criticalHigh != null && num > range.criticalHigh) return 'CC'
   if (range.lowerLimit != null && num < range.lowerLimit) return 'L'
   if (range.upperLimit != null && num > range.upperLimit) return 'H'
   return ''
 }
 
-function refText(range: ReferenceRange | null, unit: string): string {
+function refText(range: ReferenceRange | null, unit: string, valueType: string | null): string {
   if (!range) return '—'
-  if (range.interpretationText) return range.interpretationText
+  if (valueType === 'QUALITATIVE') return range.interpretationText ?? '—'
   const u = unit ? ` ${unit}` : ''
   if (range.lowerLimit != null && range.upperLimit != null) return `${range.lowerLimit} – ${range.upperLimit}${u}`
   if (range.lowerLimit != null) return `>= ${range.lowerLimit}${u}`
   if (range.upperLimit != null) return `<= ${range.upperLimit}${u}`
+  if (range.interpretationText) return range.interpretationText
   return '—'
 }
 
@@ -100,8 +99,8 @@ function buildHtml(data: ExamReportData): string {
     const unit = param?.unitId != null ? (unitMap[param.unitId] ?? '') : ''
     const ranges = referenceRanges[result.parameterId] ?? []
     const range = pickRange(ranges, patient.ageInDays, ageRangeMap)
-    const flag = getFlag(result.value, range)
-    const ref = refText(range, unit)
+    const flag = getFlag(result.value, range, param?.valueType ?? null)
+    const ref = refText(range, unit, param?.valueType ?? null)
     const valDisplay = flag ? `${result.value ?? '—'} (${flag})` : (result.value ?? '—')
 
     return `<tr>
@@ -286,7 +285,7 @@ function buildHtml(data: ExamReportData): string {
       <tbody>${rows}</tbody>
     </table>
     <div class="legend">
-      (H) = Alto &nbsp;&nbsp; (L) = Bajo &nbsp;&nbsp; (CC) = Valor Critico
+      (H) = Alto &nbsp;&nbsp; (L) = Bajo
     </div>
   </div>
 
